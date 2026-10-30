@@ -36,7 +36,8 @@ public sealed class ShellViewModelTests
                 },
                 openUrl: OpenedUrls.Add,
                 dispatch: action => action(),
-                clientVersion: "0.1.0-test");
+                clientVersion: "0.1.0-test",
+                latestVibeVersion: _ => Task.FromResult<string?>(null));
         }
     }
 
@@ -500,7 +501,8 @@ public sealed class ChiefOfStaffTests
             },
             _ => { },
             action => action(),
-            "0.1.0-test");
+            "0.1.0-test",
+            latestVibeVersion: _ => Task.FromResult<string?>(null));
     }
 
     [Fact]
@@ -565,18 +567,18 @@ public sealed class ChiefOfStaffTests
         Assert.Equal("Task from the Chief of Staff", task.KindLabel);
         await WaitUntilAsync(() => task.IsWorking);
 
-        // While the task runs, interim briefings reach the chief on the timer.
-        await WaitUntilAsync(() => shell.Chief.Transcript.OfType<MessageEntry>().Any(entry => entry.IsBriefing));
-        var interim = shell.Chief.Transcript.OfType<MessageEntry>().First(entry => entry.IsBriefing);
+        // While the task runs, interim briefings reach the chief on the timer. The first tick may land before the
+        // task has done anything, so wait for one that reflects its progress.
+        static bool Complete(MessageEntry entry) => entry.IsBriefing && entry.Text.Contains("/p/parser.cs") && entry.Text.Contains("Latest reply: Parser fixed.");
+        await WaitUntilAsync(() => shell.Chief.Transcript.ToList().OfType<MessageEntry>().Any(Complete));
+        var interim = shell.Chief.Transcript.ToList().OfType<MessageEntry>().First(Complete);
         Assert.StartsWith("[Briefing]\nTask progress: \"Fix parser\"", interim.Text);
-        Assert.Contains("/p/parser.cs", interim.Text);
-        Assert.Contains("Latest reply: Parser fixed.", interim.Text);
 
         // When it finishes, a final briefing follows, and the chief answers it.
         release.SetResult();
-        await WaitUntilAsync(() => shell.Chief.Transcript.OfType<MessageEntry>().Any(entry => entry.IsBriefing && entry.Text.Contains("Task finished")));
+        await WaitUntilAsync(() => shell.Chief.Transcript.ToList().OfType<MessageEntry>().Any(entry => entry.IsBriefing && entry.Text.Contains("Task finished")));
         await WaitUntilAsync(() => !shell.Chief.IsBusy);
-        var final = shell.Chief.Transcript.OfType<MessageEntry>().Last(entry => entry.IsBriefing);
+        var final = shell.Chief.Transcript.ToList().OfType<MessageEntry>().Last(entry => entry.IsBriefing);
         Assert.Contains("status done", final.Text);
         Assert.Contains("Final reply: Parser fixed.", final.Text);
         Assert.Equal("Noted.", Assert.IsType<MessageEntry>(shell.Chief.Transcript[^1]).Text);

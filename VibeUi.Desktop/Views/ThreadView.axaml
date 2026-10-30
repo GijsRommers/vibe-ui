@@ -61,40 +61,51 @@
                         <Button Grid.Column="1" Content="Trust" Classes="outline" Command="{Binding TrustWorkspaceCommand}" />
                     </Grid>
                 </Border>
-                <Border Classes="card" Name="Composer" Padding="10,8,10,8">
-                    <StackPanel Spacing="6">
-                        <TextBox Name="PromptBox" Classes="plain" Text="{Binding PromptText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" MaxHeight="220"
-                                 PlaceholderText="{Binding Kind, Converter={x:Static vm:ComposerText.Placeholder}}"
-                                 AutomationProperties.Name="Prompt" />
-                        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="6">
-                            <ComboBox Name="ModeBox" Classes="pill" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding HasSession}"
-                                      PlaceholderText="Mode" AutomationProperties.Name="Session mode">
+                <TextBlock Name="StatusLabel" Text="{Binding Status}" Classes="faint" Margin="4,0" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}"
+                           IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <Border Classes="card" Name="Composer" Padding="12,10,12,8">
+                    <StackPanel Spacing="8">
+                        <TextBox Name="PromptBox" Classes="plain" Text="{Binding PromptText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="44" MaxHeight="240" Padding="0,2"
+                                 PlaceholderText="{Binding Kind, Converter={x:Static vm:ComposerText.Placeholder}}" AutomationProperties.Name="Prompt" />
+                        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="2">
+                            <ComboBox Name="ModeBox" Classes="quiet" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding HasSession}"
+                                      PlaceholderText="Mode" AutomationProperties.Name="Session mode" ToolTip.Tip="Approval mode">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="acp:SessionMode">
                                         <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Description}" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <ComboBox Grid.Column="1" Name="ModelBox" Classes="pill" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" IsEnabled="{Binding HasSession}"
-                                      PlaceholderText="Model" AutomationProperties.Name="Model">
+                            <ComboBox Grid.Column="1" Name="ModelBox" Classes="quiet" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" IsEnabled="{Binding HasSession}"
+                                      PlaceholderText="Model" AutomationProperties.Name="Model" ToolTip.Tip="Model">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="acp:ConfigOptionChoice">
                                         <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Description}" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <ComboBox Grid.Column="2" Name="ThinkingBox" Classes="pill" ItemsSource="{Binding ThinkingLevels}" SelectedItem="{Binding SelectedThinking}"
-                                      IsVisible="{Binding HasThinkingLevels}" IsEnabled="{Binding HasSession}" PlaceholderText="Thinking" AutomationProperties.Name="Thinking level">
+                            <ComboBox Grid.Column="2" Name="ThinkingBox" Classes="quiet" ItemsSource="{Binding ThinkingLevels}" SelectedItem="{Binding SelectedThinking}"
+                                      IsVisible="{Binding HasThinkingLevels}" IsEnabled="{Binding HasSession}" PlaceholderText="Thinking" AutomationProperties.Name="Thinking level" ToolTip.Tip="Thinking effort">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="acp:ConfigOptionChoice">
                                         <TextBlock Text="{Binding Name, Converter={x:Static vm:ComposerText.Thinking}}" ToolTip.Tip="{Binding Description}" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <TextBlock Grid.Column="3" Name="StatusLabel" Text="{Binding Status}" Classes="faint" VerticalAlignment="Center" Margin="6,0"
-                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}" />
-                            <Button Grid.Column="4" Name="StopButton" Content="Stop" Classes="outline" Command="{Binding StopCommand}" IsVisible="{Binding IsWorking}" Padding="10,3" />
-                            <Button Grid.Column="5" Name="SendButton" Content="↑" Classes="primary send" Command="{Binding SendCommand}" ToolTip.Tip="Send (Enter)" AutomationProperties.Name="Send" />
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6">
+                                <Button Name="StopButton" Classes="outline small" Command="{Binding StopCommand}" IsVisible="{Binding IsWorking}" ToolTip.Tip="Stop (Esc)">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="Stop" />
+                                        <TextBlock Text="esc" Classes="key" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Name="SendButton" Classes="primary small" Command="{Binding SendCommand}" IsVisible="{Binding !IsWorking}" ToolTip.Tip="Send (Enter)" AutomationProperties.Name="Send">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="Send" />
+                                        <TextBlock Text="↵" Classes="key" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </Grid>
                     </StackPanel>
                 </Border>

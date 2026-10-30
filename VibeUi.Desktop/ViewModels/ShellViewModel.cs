@@ -550,8 +550,15 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
                 }
                 _dispatch(() =>
                 {
-                    foreach (var task in Projects.SelectMany(project => project.Threads).Where(thread => thread.IsChiefTask && thread.IsWorking))
-                        EnqueueBrief(task, final: false);
+                    try
+                    {
+                        foreach (var task in Projects.SelectMany(project => project.Threads).Where(thread => thread.IsChiefTask && thread.IsWorking).ToList())
+                            EnqueueBrief(task, final: false);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // A tick raced a transcript change; the next tick reports it. Never let one tick end the loop.
+                    }
                 });
             }
         });

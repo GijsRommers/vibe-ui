@@ -49,7 +49,8 @@ public static class TestShell
                 return client;
             },
             _ => { },
-            action => action());
+            action => action(),
+            latestVibeVersion: _ => Task.FromResult<string?>(null));
         return (shell, client, workspace);
     }
 }
