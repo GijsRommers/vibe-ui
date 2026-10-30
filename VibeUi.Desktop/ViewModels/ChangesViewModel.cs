@@ -13,6 +13,7 @@ public sealed partial class ChangesViewModel : ObservableObject
     private readonly Action<Action> _dispatch;
     private bool _refreshing;
     private bool _refreshAgain;
+    private Task _current = Task.CompletedTask;
     private int _diffGeneration;
 
     public ChangesViewModel(string path, Action<Action> dispatch)
@@ -51,6 +52,27 @@ public sealed partial class ChangesViewModel : ObservableObject
     [ObservableProperty] private string _pullRequestTitle = "";
     [ObservableProperty] private string _pullRequestBody = "";
     [ObservableProperty] private bool _pullRequestDraft;
+
+    /// <summary>The open pull request for this checkout's branch, if any.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCurrentPullRequest), nameof(CanMarkReady))]
+    private PullRequest? _currentPullRequest;
+
+    public bool HasCurrentPullRequest => CurrentPullRequest is not null;
+    public bool CanMarkReady => CurrentPullRequest is { IsDraft: true };
+
+    [RelayCommand]
+    private Task MarkReadyAsync() => CurrentPullRequest is { } pull ? RunActionAsync(() => GitActions.MarkReadyAsync(_path, pull.Number)) : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task MergeAsync() => CurrentPullRequest is { } pull ? RunActionAsync(() => GitActions.MergeAsync(_path, pull.Number)) : Task.CompletedTask;
+
+    [RelayCommand]
+    private void OpenCurrentPullRequest()
+    {
+        if (CurrentPullRequest is { } pull)
+            OpenUrlRequested?.Invoke(this, pull.Url);
+    }
 
     /// <summary>Raised with a URL the view should open in the browser.</summary>
     public event EventHandler<string>? OpenUrlRequested;
@@ -127,6 +149,7 @@ public sealed partial class ChangesViewModel : ObservableObject
             foreach (var pull in pulls)
                 PullRequests.Add(pull);
             HasPullRequests = PullRequests.Count > 0;
+            CurrentPullRequest = pulls.FirstOrDefault(pull => pull.HeadRefName == Branch);
         });
     }
 
@@ -136,9 +159,9 @@ public sealed partial class ChangesViewModel : ObservableObject
         if (_refreshing)
         {
             _refreshAgain = true;
-            return Task.CompletedTask;
+            return _current; // the running refresh loops once more and covers this request
         }
-        return RefreshCoreAsync();
+        return _current = RefreshCoreAsync();
     }
 
     private async Task RefreshCoreAsync()

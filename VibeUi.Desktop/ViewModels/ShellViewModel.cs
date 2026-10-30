@@ -153,7 +153,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     public string WorktreeRoot => Path.Combine(_state.Directory ?? Path.GetTempPath(), "worktrees");
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(HasProjects), nameof(ShowEmptyState), nameof(ShowThread), nameof(ShowNoThread))]
+    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(HasProjects), nameof(ShowEmptyState), nameof(ShowThread), nameof(ShowNoThread), nameof(ActiveChanges))]
     private ThreadViewModel? _selectedThread;
 
     [ObservableProperty]
@@ -276,7 +276,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     public bool HasSelection => SelectedThread is not null;
     public bool ShowEmptyState => !HasProjects && !HasSelection;
     public AgentConnection? ActiveConnection => SelectedProject?.Connection;
-    public ChangesViewModel? ActiveChanges => SelectedProject?.Changes;
+    public ChangesViewModel? ActiveChanges => SelectedThread is { } thread ? thread.Project.ChangesFor(thread.WorkspacePath) : SelectedProject?.Changes;
 
     // Which centre panel is up. The connection's state wins over the thread while Vibe is missing, signed out or down.
     // Until the active agent is ready, a full-window gate (logo, progress, sign-in) covers everything.
@@ -396,7 +396,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         SelectedThread = thread;
         thread.IsSelected = true;
         _state.SelectedThreadId = thread.Id;
-        if (thread.Project.Changes is { Loaded: false } changes)
+        if (thread.Project.ChangesFor(thread.WorkspacePath) is { Loaded: false } changes)
             _ = changes.RefreshAsync();
         await OpenAsync(thread);
     }
@@ -488,15 +488,49 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     private ProjectViewModel NewProject(ProjectRecord record)
     {
         var connection = new AgentConnection(record.Path, _locateAgent, _startAgent, _openUrl, _dispatch, _clientVersion);
-        var changes = new ChangesViewModel(record.Path, _dispatch);
-        changes.OpenUrlRequested += (_, url) => _openUrl(url);
-        var project = new ProjectViewModel(record, connection, changes, new ActionsViewModel(record.Path, _dispatch));
+        var project = new ProjectViewModel(record, connection, NewChanges(record.Path), new ActionsViewModel(record.Path, _dispatch)) { ChangesFactory = NewChanges };
         connection.SignedIn += async (_, _) =>
         {
             if (SelectedThread is { } thread && thread.Project == project)
                 await OpenAsync(thread);
         };
         return project;
+    }
+
+    private ChangesViewModel NewChanges(string path)
+    {
+        var changes = new ChangesViewModel(path, _dispatch);
+        changes.OpenUrlRequested += (_, url) => _openUrl(url);
+        return changes;
+    }
+
+    /// <summary>A thread that works in its own git worktree and branch, so it can run alongside others.</summary>
+    [RelayCommand]
+    public async Task NewWorktreeThreadAsync(ProjectViewModel? project)
+    {
+        project ??= SelectedProject;
+        if (project is null || project.IsChief)
+            return;
+        var id = Guid.NewGuid().ToString("N");
+        GitWorktrees.Worktree created;
+        try
+        {
+            created = await Task.Run(() => GitWorktrees.CreateAsync(project.Path, WorktreeRoot, "thread-" + id[..6]));
+        }
+        catch (InvalidOperationException exception)
+        {
+            if (SelectedThread is { } current)
+                current.Status = $"Could not create a worktree: {exception.Message}";
+            return;
+        }
+        foreach (var setup in project.Actions.Actions.Where(action => action.RunOnWorktreeCreate))
+            await project.Actions.RunAsync(setup, created.Path, show: false);
+        var record = new ThreadRecord { Id = id, Kind = ThreadKind.Chat.ToString(), ModeId = _state.DefaultModeId, WorktreePath = created.Path, Branch = created.Branch };
+        var thread = NewThread(project, record);
+        Attach(project, thread);
+        project.IsExpanded = true;
+        await SelectThreadAsync(thread);
+        Save();
     }
 
     private ThreadViewModel NewThread(ProjectViewModel project, ThreadRecord record)
@@ -522,7 +556,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         {
             _lastTurns[thread.Id] = result;
             if (IsChangesVisible && project == SelectedProject)
-                _ = project.Changes.RefreshAsync();
+                _ = project.ChangesFor(thread.WorkspacePath).RefreshAsync();
             if (thread.IsChiefTask)
                 EnqueueBrief(thread, final: true);
         };

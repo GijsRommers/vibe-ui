@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         var command = TryGetCommandModifier();
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.N, command), Command = model.NewThreadCommand });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.N, command | KeyModifiers.Shift), Command = model.NewOrchestratorCommand });
+        KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.N, command | KeyModifiers.Alt), Command = model.NewWorktreeThreadCommand });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.O, command | KeyModifiers.Shift), Command = new RelayAction(() => _ = AddProjectAsync()) });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.D, command), Command = model.ToggleChangesCommand });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.OemComma, command), Command = model.ToggleSettingsCommand });

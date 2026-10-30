@@ -32,8 +32,25 @@
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                 <TextBlock Text="{Binding Upstream}" Classes="faint" VerticalAlignment="Center" />
                 <Button Grid.Column="1" Content="Push" Classes="outline" Command="{Binding PushCommand}" Padding="10,4" IsEnabled="{Binding !IsActing}" />
-                <Button Grid.Column="2" Content="New PR" Classes="outline" Command="{Binding TogglePullRequestFormCommand}" Padding="10,4" />
+                <Button Grid.Column="2" Content="New PR" Classes="outline" Command="{Binding TogglePullRequestFormCommand}" Padding="10,4" IsVisible="{Binding !HasCurrentPullRequest}" />
             </Grid>
+            <!-- This branch's pull request -->
+            <Border Classes="card" Padding="10,8" IsVisible="{Binding $parent[UserControl].((vm:ChangesViewModel)DataContext).HasCurrentPullRequest}"
+                    DataContext="{Binding CurrentPullRequest}" x:DataType="svc:PullRequest">
+                <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock Text="{Binding Label}" Classes="faint" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Content="Open" Classes="ghost small" Command="{Binding $parent[UserControl].((vm:ChangesViewModel)DataContext).OpenCurrentPullRequestCommand}" />
+                        <Button Content="Mark ready" Classes="outline small" Command="{Binding $parent[UserControl].((vm:ChangesViewModel)DataContext).MarkReadyCommand}"
+                                IsVisible="{Binding IsDraft}" />
+                        <Button Content="Squash merge" Classes="primary small" Command="{Binding $parent[UserControl].((vm:ChangesViewModel)DataContext).MergeCommand}"
+                                IsVisible="{Binding !IsDraft}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
             <Border Classes="card" Padding="8" IsVisible="{Binding IsPullRequestFormOpen}">
                 <StackPanel Spacing="6">
                     <TextBox Classes="plain" Text="{Binding PullRequestTitle}" PlaceholderText="Title" FontSize="13" AutomationProperties.Name="Pull request title" />

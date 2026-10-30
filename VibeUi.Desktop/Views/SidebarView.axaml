@@ -93,6 +93,7 @@
                                     <Button.Flyout>
                                         <MenuFlyout>
                                             <MenuItem Header="New thread" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).NewThreadCommand}" CommandParameter="{Binding}" />
+                                            <MenuItem Header="New thread in a worktree" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).NewWorktreeThreadCommand}" CommandParameter="{Binding}" />
                                             <MenuItem Header="New orchestrator" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).NewOrchestratorCommand}" CommandParameter="{Binding}" />
                                             <Separator />
                                             <MenuItem Header="Remove project" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RemoveProjectCommand}" CommandParameter="{Binding}" />

@@ -688,3 +688,64 @@ public sealed class ActionToolTests
         await shell.ShutdownAsync();
     }
 }
+
+public sealed class WorktreeThreadTests
+{
+    [Fact]
+    public async Task WorktreeThreadGetsItsOwnCheckoutBranchAndChangesPane()
+    {
+        Assert.SkipWhen(OperatingSystem.IsWindows(), "Shell commands here are POSIX.");
+        var directory = Directory.CreateTempSubdirectory("vibe-ui-wt").FullName;
+        var repo = Directory.CreateTempSubdirectory("vibe-ui-wt-repo").FullName;
+        Run(repo, "git", "init", "-q", "-b", "main");
+        File.WriteAllText(Path.Combine(repo, "vibe.re"), """{"actions":[{"name":"setup","command":"echo prepared > setup.txt","runOnWorktreeCreate":true}]}""");
+        Run(repo, "git", "add", "-A");
+        Run(repo, "git", "-c", "user.email=t@example.com", "-c", "user.name=T", "commit", "-q", "-m", "init");
+        var clients = new List<FakeAcpClient>();
+        var shell = new ShellViewModel(AppState.Load(directory), new ThreadStore(directory),
+            () => "/usr/local/bin/vibe-acp",
+            (_, cwd, handler, _) =>
+            {
+                var client = new FakeAcpClient { Handler = handler, Workspace = cwd };
+                clients.Add(client);
+                return client;
+            },
+            _ => { },
+            action => action(),
+            latestVibeVersion: _ => Task.FromResult<string?>(null));
+        await shell.AddProjectAsync(repo);
+        var project = shell.SelectedProject!;
+
+        await shell.NewWorktreeThreadAsync(project);
+
+        var thread = shell.SelectedThread!;
+        Assert.True(thread.HasWorktree);
+        Assert.StartsWith("vibe/thread-", thread.Record.Branch);
+        Assert.True(Directory.Exists(thread.WorkspacePath));
+        Assert.NotEqual(repo, thread.WorkspacePath);
+        Assert.Equal("prepared", File.ReadAllText(Path.Combine(thread.WorkspacePath, "setup.txt")).Trim()); // runOnWorktreeCreate ran there
+        Assert.Contains($"session/new:{thread.WorkspacePath}", clients.Single().Calls); // one agent per project, session in the worktree
+        Assert.NotSame(project.Changes, shell.ActiveChanges);
+        await shell.ActiveChanges!.RefreshAsync();
+        Assert.Equal(thread.Record.Branch, shell.ActiveChanges.Branch);
+        Assert.Equal(2, project.Threads.Count);
+
+        File.Delete(Path.Combine(thread.WorkspacePath, "setup.txt")); // leave the worktree clean so deleting the thread removes it
+        await shell.DeleteThreadAsync(thread);
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (Directory.Exists(thread.WorkspacePath) && DateTime.UtcNow < deadline)
+            await Task.Delay(50);
+        Assert.False(Directory.Exists(thread.WorkspacePath));
+        await shell.ShutdownAsync();
+    }
+
+    private static void Run(string directory, string file, params string[] arguments)
+    {
+        var startInfo = new System.Diagnostics.ProcessStartInfo(file) { WorkingDirectory = directory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+        using var process = System.Diagnostics.Process.Start(startInfo)!;
+        process.WaitForExit();
+        Assert.Equal(0, process.ExitCode);
+    }
+}

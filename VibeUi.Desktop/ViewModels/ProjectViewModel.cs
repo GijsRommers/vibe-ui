@@ -20,6 +20,21 @@ public sealed partial class ProjectViewModel : ObservableObject
     /// <summary>The project's vibe.re actions and their output drawer.</summary>
     public ActionsViewModel Actions { get; }
 
+    private readonly Dictionary<string, ChangesViewModel> _worktreeChanges = new(StringComparer.Ordinal);
+
+    /// <summary>The Changes pane for a checkout: the project itself, or one of its worktrees.</summary>
+    public ChangesViewModel ChangesFor(string workspacePath)
+    {
+        if (string.Equals(workspacePath, Path, StringComparison.Ordinal))
+            return Changes;
+        if (!_worktreeChanges.TryGetValue(workspacePath, out var changes))
+            _worktreeChanges[workspacePath] = changes = ChangesFactory(workspacePath);
+        return changes;
+    }
+
+    /// <summary>Set by the shell so worktree panes share its dispatcher and URL opener.</summary>
+    public Func<string, ChangesViewModel> ChangesFactory { get; set; } = path => throw new InvalidOperationException("No changes factory.");
+
     /// <summary>The hidden workspace that hosts the Chief of Staff; not listed in the sidebar.</summary>
     public bool IsChief { get; }
 

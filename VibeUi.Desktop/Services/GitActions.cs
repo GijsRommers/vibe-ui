@@ -75,6 +75,20 @@ public static class GitActions
         }
     }
 
+    /// <summary>Marks a draft pull request ready for review.</summary>
+    public static async Task<ActionResult> MarkReadyAsync(string directory, int number, CancellationToken cancellationToken = default)
+    {
+        var result = await RunGhAsync(directory, ["pr", "ready", number.ToString()], cancellationToken);
+        return result.ExitCode == 0 ? ActionResult.Success($"#{number} is ready for review.") : ActionResult.Failure(FirstLine(result.Error ?? result.Output, "gh pr ready failed."));
+    }
+
+    /// <summary>Squash-merges a pull request and deletes its branch.</summary>
+    public static async Task<ActionResult> MergeAsync(string directory, int number, CancellationToken cancellationToken = default)
+    {
+        var result = await RunGhAsync(directory, ["pr", "merge", number.ToString(), "--squash", "--delete-branch"], cancellationToken);
+        return result.ExitCode == 0 ? ActionResult.Success($"Merged #{number}.") : ActionResult.Failure(FirstLine(result.Error ?? result.Output, "gh pr merge failed."));
+    }
+
     /// <summary>Raw JSON from <c>gh pr view</c> with checks and review state, or an error.</summary>
     public static async Task<(string? Json, string? Error)> PullRequestChecksAsync(string directory, string number, CancellationToken cancellationToken = default)
     {

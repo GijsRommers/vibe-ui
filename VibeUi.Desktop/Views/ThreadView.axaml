@@ -18,6 +18,12 @@
                         <Border Classes="badge" VerticalAlignment="Center" IsVisible="{Binding IsTask}">
                             <TextBlock Text="Delegated task" />
                         </Border>
+                        <Border Classes="badge" VerticalAlignment="Center" IsVisible="{Binding HasWorktree}" ToolTip.Tip="This thread works in its own git worktree">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="⎇" />
+                                <TextBlock Text="{Binding Record.Branch}" />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsChief}">
                         <ItemsControl ItemsSource="{Binding Project.Actions.Actions}" VerticalAlignment="Center" Margin="-6,0,6,0">

@@ -31,6 +31,10 @@ The server, CLI, web and mobile pieces of the earlier VibeRe project live on in
   `run_action`, plus `list_pull_requests`, `pull_request_checks` and `create_pull_request` through
   `gh`.
 - **Settings** (⌘,): the `vibe-acp` executable, default mode, briefing interval, Vibe updates.
+- **Worktree threads.** "New thread in a worktree" (⌘⌥N) gives a thread its own git worktree and
+  `vibe/…` branch, so several threads can edit the same project at once. The Changes pane follows
+  the thread's checkout and shows its pull request with mark-ready and squash-merge. Agents get
+  `search_code`, a local BM25 index of the project, to find the right files before delegating.
 - **Orchestrator threads.** A thread that gets extra tools from Vibe UI itself: `delegate_task`,
   `wait_for_task`, `check_task`, `list_tasks`, `send_to_task` and `cancel_task`. Each delegated task
   is a child thread with its own Vibe session, nested under the orchestrator in the sidebar, and can
@@ -43,7 +47,7 @@ The server, CLI, web and mobile pieces of the earlier VibeRe project live on in
 - **Sign in** through Mistral AI Studio in your browser, and sign out. Vibe stores the key.
 - **Workspace trust.** An untrusted folder gets a banner with a one-click "Trust this folder".
 - **Shortcuts.** ⌘N new thread, ⌘⇧N new orchestrator, ⌘⇧O add project, ⌘D changes pane,
-  ⌘⇧T thoughts, ⌘, settings, Esc stop the current turn. Ctrl on Windows and Linux.
+  ⌘⌥N worktree thread, ⌘⇧T thoughts, ⌘, settings, Esc stop the current turn. Ctrl on Windows and Linux.
 
 ## Run it
 
