@@ -9,9 +9,6 @@ project and talks to it over the [Agent Client Protocol](https://agentclientprot
 same way Zed, JetBrains and Xcode do. Mistral Vibe keeps owning your credentials, sessions, tools,
 modes, MCP servers, skills and configuration in `~/.vibe`.
 
-The server, CLI, web and mobile pieces of the earlier VibeRe project live on in
-[Vibe-Re](https://github.com/GijsRommers/Vibe-Re).
-
 ## What you get
 
 - **Projects and threads.** Add folders to the sidebar; each one runs its own `vibe-acp` process and
