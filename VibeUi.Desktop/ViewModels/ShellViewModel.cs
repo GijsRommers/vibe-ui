@@ -175,13 +175,22 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     private bool _isBrowserVisible;
 
     public BrowserViewModel? ActiveBrowser => SelectedProject?.Browser;
+
+    /// <summary>Browser takes most of the window; the chat shrinks to its minimum.</summary>
+    [ObservableProperty] private bool _isBrowserWide;
+
+    [RelayCommand]
+    private void ToggleBrowserWide() => IsBrowserWide = !IsBrowserWide;
     public bool ShowBrowserPane => IsBrowserVisible && SelectedProject is { IsChief: false };
 
     [RelayCommand]
     private void ToggleBrowser() => IsBrowserVisible = !IsBrowserVisible;
 
+    // One right-hand pane at a time, like T3 Code: opening the browser hides the diff and the other way round.
     partial void OnIsBrowserVisibleChanged(bool value)
     {
+        if (value)
+            IsChangesVisible = false;
         _state.ShowBrowser = value;
         _state.Save();
     }
@@ -678,6 +687,8 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
 
     partial void OnIsChangesVisibleChanged(bool value)
     {
+        if (value)
+            IsBrowserVisible = false;
         _state.ShowChanges = value;
         _state.Save();
     }

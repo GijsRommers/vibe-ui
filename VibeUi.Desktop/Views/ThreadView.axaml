@@ -48,13 +48,14 @@
                     </StackPanel>
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="{Binding UsageText}" Classes="faint" VerticalAlignment="Center"
+                           IsVisible="{Binding !$parent[Window].((vm:ShellViewModel)DataContext).ShowBrowserPane}"
                            ToolTip.Tip="How much of the model's context window this thread uses, and what the session has cost" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <ToggleButton Classes="ghost" Content="Thoughts" FontSize="12" ToolTip.Tip="Show the model's reasoning (⌘⇧T)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowThoughts}" />
-                    <ToggleButton Classes="ghost" Content="Browser" FontSize="12" ToolTip.Tip="Show the built-in browser (⌘B)" IsVisible="{Binding !IsChief}"
+                    <ToggleButton Classes="ghost" Content="Web" FontSize="12" ToolTip.Tip="Built-in browser (⌘B)" IsVisible="{Binding !IsChief}"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsBrowserVisible}" />
-                    <ToggleButton Classes="ghost" Content="Changes" FontSize="12" ToolTip.Tip="Show the git changes pane (⌘D)"
+                    <ToggleButton Classes="ghost" Content="Diff" FontSize="12" ToolTip.Tip="Git changes and pull requests (⌘D)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsChangesVisible}" />
                 </StackPanel>
             </Grid>

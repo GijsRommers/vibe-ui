@@ -58,6 +58,18 @@ public sealed class SnapshotAndIntegrationTests
             Dispatcher.UIThread.RunJobs();
             Save(window, Path.Combine(directory!, "chief.png"));
 
+            await shell.SelectThreadAsync(thread);
+            shell.IsBrowserVisible = true;
+            shell.ActiveBrowser!.Navigate("localhost:3000");
+            Dispatcher.UIThread.RunJobs();
+            Save(window, Path.Combine(directory!, "browser.png"));
+            shell.IsBrowserWide = true;
+            Dispatcher.UIThread.RunJobs();
+            Save(window, Path.Combine(directory!, "browser-wide.png"));
+            shell.IsBrowserVisible = false;
+            shell.IsBrowserWide = false;
+            shell.IsChangesVisible = true;
+
             client.RequireAuthentication = true;
             await shell.SignOutCommand.ExecuteAsync(null);
             Dispatcher.UIThread.RunJobs();

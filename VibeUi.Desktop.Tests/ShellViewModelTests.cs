@@ -788,9 +788,11 @@ public sealed class BrowserTests
         await shell.NewOrchestratorAsync(shell.SelectedProject);
         Assert.False(shell.ShowBrowserPane);
 
+        shell.IsChangesVisible = true;
         await shell.OpenInBrowserAsync(shell.SelectedThread!.Id, "localhost:4321", null);
 
         Assert.True(shell.ShowBrowserPane);
+        Assert.False(shell.ShowChangesPane); // one right-hand pane at a time
         Assert.Equal("http://localhost:4321/", shell.ActiveBrowser!.Source.ToString());
         shell.ActiveBrowser.ReportNavigation(new Uri("http://localhost:4321/about"), true, true, false);
         shell.Save();

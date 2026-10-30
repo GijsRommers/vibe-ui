@@ -14,13 +14,40 @@ public partial class MainWindow : Window
         DataContextChanged += (_, _) =>
         {
             if (DataContext is ShellViewModel model)
+            {
                 InstallShortcuts(model);
+                model.PropertyChanged += (_, args) =>
+                {
+                    if (args.PropertyName is nameof(ShellViewModel.ShowBrowserPane) or nameof(ShellViewModel.ShowChangesPane) or nameof(ShellViewModel.IsBrowserWide) or null)
+                        LayoutColumns(model);
+                };
+                LayoutColumns(model);
+            }
         };
         Opened += async (_, _) =>
         {
             if (DataContext is ShellViewModel model)
                 await model.InitializeAsync();
         };
+    }
+
+    /// <summary>
+    /// Sidebar | chat | browser | changes. Hidden panes collapse to zero so star columns do not reserve
+    /// space for them; the browser takes a 2:3 share next to the chat, or 3:1 when widened.
+    /// </summary>
+    public void LayoutColumns(ShellViewModel model)
+    {
+        var columns = Columns.ColumnDefinitions;
+        var browser = model.ShowBrowserPane;
+        var changes = model.ShowChangesPane;
+        columns[2].Width = new GridLength(browser && model.IsBrowserWide ? 1 : 1, GridUnitType.Star);
+        columns[2].MinWidth = browser ? (model.IsBrowserWide ? 320 : 420) : 480;
+        columns[3].Width = new GridLength(browser ? 1 : 0);
+        columns[4].Width = browser ? new GridLength(model.IsBrowserWide ? 4 : 1, GridUnitType.Star) : new GridLength(0);
+        columns[4].MinWidth = browser ? 380 : 0;
+        columns[5].Width = new GridLength(changes ? 1 : 0);
+        columns[6].Width = new GridLength(changes ? 380 : 0);
+        columns[6].MinWidth = changes ? 300 : 0;
     }
 
     /// <summary>⌘/Ctrl shortcuts: N new thread, ⇧N new orchestrator, ⇧O add project, D changes, ⇧T thoughts, Esc stop.</summary>

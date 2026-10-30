@@ -5,7 +5,7 @@
              Background="{StaticResource SidebarBrush}">
     <DockPanel>
         <Border DockPanel.Dock="Top" Padding="8,8,8,8" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="4">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="4">
                 <Button Classes="icon" Content="‹" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip.Tip="Back" />
                 <Button Grid.Column="1" Classes="icon" Content="›" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip.Tip="Forward" />
                 <Button Grid.Column="2" Classes="icon" Content="↻" Command="{Binding RefreshCommand}" ToolTip.Tip="Reload" IsVisible="{Binding !IsLoading}" />
@@ -15,11 +15,20 @@
                              PlaceholderText="localhost:3000" AutomationProperties.Name="Address" />
                 </Border>
                 <Button Grid.Column="4" Classes="icon" Content="↗" Command="{Binding OpenExternallyCommand}" ToolTip.Tip="Open in your browser" />
+                <ToggleButton Grid.Column="5" Classes="icon ghost" Content="⤢" ToolTip.Tip="Widen the browser"
+                              IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsBrowserWide}" />
+                <Button Grid.Column="6" Classes="icon" Content="✕" ToolTip.Tip="Close (⌘B)"
+                        Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ToggleBrowserCommand}" />
             </Grid>
         </Border>
         <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="2" />
-        <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Classes="faint" Margin="12,6" TextWrapping="Wrap"
-                   IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <Panel Name="WebHost" Background="#FFFFFF" />
+        <Panel Name="WebHost" Background="#FFFFFF">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6" MaxWidth="360"
+                        IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="Nothing here yet" Foreground="#222" FontWeight="SemiBold" TextAlignment="Center" />
+                <TextBlock Text="{Binding Error}" Foreground="#666" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" />
+                <TextBlock Text="Start your dev server, then press ↻." Foreground="#666" FontSize="12" TextAlignment="Center" />
+            </StackPanel>
+        </Panel>
     </DockPanel>
 </UserControl>

@@ -73,6 +73,8 @@ public sealed class MainWindowTests
             var threadView = Assert.IsType<ThreadView>(window.FindControl<ContentControl>("ThreadHost")!.GetVisualDescendants().OfType<ThreadView>().Single());
             Assert.False(window.FindControl<Border>("Gate")!.IsVisible);
             Assert.False(window.FindControl<StackPanel>("EmptyState")!.IsVisible);
+            shell.IsChangesVisible = true;
+            Dispatcher.UIThread.RunJobs();
             Assert.True(window.FindControl<ChangesView>("Changes")!.IsVisible);
             Assert.Equal(4, threadView.FindControl<ComboBox>("ModeBox")!.ItemCount);
             Assert.Equal(3, threadView.FindControl<ComboBox>("ThinkingBox")!.ItemCount);

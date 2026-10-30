@@ -6,7 +6,8 @@
         Title="Vibe UI" Icon="/Assets/vibe-ui.png" Width="1280" Height="820" MinWidth="820" MinHeight="520"
         Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}" RequestedThemeVariant="Dark">
     <Panel>
-    <Grid Name="Columns" ColumnDefinitions="248,Auto,*,Auto,Auto,Auto,Auto" IsVisible="{Binding !ShowGate}">
+    <!-- Column widths are set in code: panes take star shares when shown and collapse to zero when hidden. -->
+    <Grid Name="Columns" ColumnDefinitions="248,1,*,0,0,0,0" IsVisible="{Binding !ShowGate}">
         <views:SidebarView Grid.Column="0" Name="Sidebar" />
         <GridSplitter Grid.Column="1" Width="1" Background="{StaticResource LineBrush}" ResizeDirection="Columns" />
 
@@ -34,9 +35,9 @@
         </Panel>
 
         <GridSplitter Grid.Column="3" Width="1" Background="{StaticResource LineBrush}" ResizeDirection="Columns" IsVisible="{Binding ShowBrowserPane}" />
-        <views:BrowserView Grid.Column="4" Name="Browser" Width="520" DataContext="{Binding ActiveBrowser}" IsVisible="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowBrowserPane}" />
+        <views:BrowserView Grid.Column="4" Name="Browser" DataContext="{Binding ActiveBrowser}" IsVisible="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowBrowserPane}" />
         <GridSplitter Grid.Column="5" Width="1" Background="{StaticResource LineBrush}" ResizeDirection="Columns" IsVisible="{Binding ShowChangesPane}" />
-        <views:ChangesView Grid.Column="6" Name="Changes" Width="380" DataContext="{Binding ActiveChanges}" IsVisible="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowChangesPane}" />
+        <views:ChangesView Grid.Column="6" Name="Changes" DataContext="{Binding ActiveChanges}" IsVisible="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowChangesPane}" />
     </Grid>
 
     <!-- Gate: shown until the agent is ready. Starting, sign-in, not installed, or stopped. -->
