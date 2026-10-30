@@ -46,11 +46,21 @@ public sealed class FakeAcpClient : IAcpClient
         return new AuthenticateResponse();
     }
 
+    private int _sessionCounter;
+
     public Task<NewSessionResponse> NewSessionAsync(NewSessionRequest request, CancellationToken cancellationToken = default)
     {
         Calls.Add($"session/new:{request.Cwd}");
+        McpServersSeen.Add(request.McpServers);
         if (RequireAuthentication)
             throw new JsonRpcException(JsonRpcException.AuthenticationRequired, "Authentication required");
+        var id = _sessionCounter++ == 0 ? SessionId : $"{SessionId}-{_sessionCounter}";
+        return NewSessionCoreAsync(request.Cwd, id);
+    }
+
+    private Task<NewSessionResponse> NewSessionCoreAsync(string cwd, string? id = null)
+    {
+        id ??= SessionId;
         var modes = new SessionModeState("accept-edits",
         [
             new SessionMode("ask", "Ask"),
@@ -62,9 +72,39 @@ public sealed class FakeAcpClient : IAcpClient
             new("mode", "Session Mode", "select", JsonSerializer.SerializeToElement("accept-edits"), "mode"),
             new("model", "Model", "select", JsonSerializer.SerializeToElement("mistral-medium-3.5"), "model",
                 [new ConfigOptionChoice("mistral-medium-3.5", "Mistral Medium 3.5"), new ConfigOptionChoice("devstral-small", "devstral-small")]),
+            new("thinking", "Thinking", "select", JsonSerializer.SerializeToElement("medium"), "thought_level",
+                [new ConfigOptionChoice("off", "Off"), new ConfigOptionChoice("medium", "Medium"), new ConfigOptionChoice("high", "High")]),
         };
         var meta = JsonSerializer.SerializeToElement(new { workspace_trust = new { status = TrustStatus } });
-        return Task.FromResult(new NewSessionResponse(SessionId, modes, options, meta));
+        return Task.FromResult(new NewSessionResponse(id, modes, options, meta));
+    }
+
+    /// <summary>Session ids that <c>session/load</c> accepts; others fail like Vibe does for unknown sessions.</summary>
+    public HashSet<string> LoadableSessions { get; } = [];
+
+    /// <summary>Replayed as session updates (JSON) while a session loads.</summary>
+    public List<string> ReplayOnLoad { get; } = [];
+
+    public List<IReadOnlyList<object>> McpServersSeen { get; } = [];
+
+    public async Task<LoadSessionResponse> LoadSessionAsync(LoadSessionRequest request, CancellationToken cancellationToken = default)
+    {
+        Calls.Add($"session/load:{request.SessionId}:{request.Cwd}");
+        McpServersSeen.Add(request.McpServers);
+        if (RequireAuthentication)
+            throw new JsonRpcException(JsonRpcException.AuthenticationRequired, "Authentication required");
+        if (!LoadableSessions.Contains(request.SessionId))
+            throw new JsonRpcException(JsonRpcException.InvalidParams, $"Session {request.SessionId} not found");
+        foreach (var update in ReplayOnLoad)
+            await Handler.OnSessionUpdateAsync(request.SessionId, SessionUpdateParser.Parse(JsonSerializer.Deserialize<JsonElement>(update)));
+        var fresh = await NewSessionCoreAsync(request.Cwd);
+        return new LoadSessionResponse(fresh.Modes, fresh.ConfigOptions, fresh.Meta);
+    }
+
+    public Task<ListSessionsResponse> ListSessionsAsync(ListSessionsRequest request, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("session/list");
+        return Task.FromResult(new ListSessionsResponse(LoadableSessions.Select(id => new SessionInfo(id, Workspace, "Saved " + id)).ToList()));
     }
 
     public Task<PromptResponse> PromptAsync(PromptRequest request, CancellationToken cancellationToken = default)
@@ -104,6 +144,8 @@ public sealed class FakeAcpClient : IAcpClient
     public Task<JsonElement> ExtensionRequestAsync(string method, object? parameters, CancellationToken cancellationToken = default)
     {
         Calls.Add($"ext:{method}");
+        if (method is "_session/set_title" or "_session/delete")
+            return Task.FromResult(JsonSerializer.SerializeToElement(new { }));
         if (method == "_auth/signOut")
         {
             RequireAuthentication = true;
@@ -113,7 +155,8 @@ public sealed class FakeAcpClient : IAcpClient
         return Task.FromResult(JsonSerializer.SerializeToElement(new { trust_status = "trusted" }));
     }
 
-    public Task SendUpdateAsync(string update) => Handler.OnSessionUpdateAsync(SessionId, SessionUpdateParser.Parse(JsonSerializer.Deserialize<JsonElement>(update)));
+    public Task SendUpdateAsync(string update, string? sessionId = null)
+        => Handler.OnSessionUpdateAsync(sessionId ?? SessionId, SessionUpdateParser.Parse(JsonSerializer.Deserialize<JsonElement>(update)));
 
     public ValueTask DisposeAsync()
     {

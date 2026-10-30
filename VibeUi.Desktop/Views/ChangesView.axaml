@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VibeUi.Desktop.ViewModels"
+             xmlns:svc="using:VibeUi.Desktop.Services"
+             x:Class="VibeUi.Desktop.Views.ChangesView" x:DataType="vm:ChangesViewModel"
+             Background="{StaticResource SidebarBrush}">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="14,12,10,10" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Changes" FontWeight="SemiBold" FontSize="13" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="⎇" Classes="faint" IsVisible="{Binding IsRepository}" />
+                        <TextBlock Text="{Binding Branch}" Classes="faint" IsVisible="{Binding IsRepository}" />
+                        <TextBlock Text="{Binding Summary}" Classes="faint" />
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="icon" Content="↻" Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh" AutomationProperties.Name="Refresh changes" />
+            </Grid>
+        </Border>
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding IsRefreshing}" Height="2" />
+
+        <!-- Actions: commit, push, pull requests -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="10,8,10,10" IsVisible="{Binding IsRepository}">
+            <TextBlock Text="{Binding ActionStatus}" Classes="faint" TextWrapping="Wrap" IsVisible="{Binding ActionStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <Border Classes="card" Padding="8" IsVisible="{Binding HasChanges}">
+                <StackPanel Spacing="6">
+                    <TextBox Name="CommitBox" Classes="plain" Text="{Binding CommitMessage}" PlaceholderText="Commit message" AcceptsReturn="True" MaxHeight="90" FontSize="13" AutomationProperties.Name="Commit message" />
+                    <Button Content="Commit all" Classes="primary" Command="{Binding CommitCommand}" HorizontalAlignment="Right" Padding="10,4" IsEnabled="{Binding !IsActing}" />
+                </StackPanel>
+            </Border>
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                <TextBlock Text="{Binding Upstream}" Classes="faint" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Push" Classes="outline" Command="{Binding PushCommand}" Padding="10,4" IsEnabled="{Binding !IsActing}" />
+                <Button Grid.Column="2" Content="New PR" Classes="outline" Command="{Binding TogglePullRequestFormCommand}" Padding="10,4" />
+            </Grid>
+            <Border Classes="card" Padding="8" IsVisible="{Binding IsPullRequestFormOpen}">
+                <StackPanel Spacing="6">
+                    <TextBox Classes="plain" Text="{Binding PullRequestTitle}" PlaceholderText="Title" FontSize="13" AutomationProperties.Name="Pull request title" />
+                    <TextBox Classes="plain" Text="{Binding PullRequestBody}" PlaceholderText="Description" AcceptsReturn="True" MaxHeight="120" FontSize="13" AutomationProperties.Name="Pull request body" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <CheckBox Content="Draft" IsChecked="{Binding PullRequestDraft}" FontSize="12" />
+                        <Button Grid.Column="1" Content="Create" Classes="primary" Command="{Binding CreatePullRequestCommand}" Padding="10,4" IsEnabled="{Binding !IsActing}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Pull requests" Classes="section" />
+                <TextBlock Text="{Binding PullRequestError}" Classes="faint" TextWrapping="Wrap" IsVisible="{Binding PullRequestError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="None open" Classes="faint" IsVisible="{Binding !HasPullRequests}" />
+                <ItemsControl Name="PullList" ItemsSource="{Binding PullRequests}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="svc:PullRequest">
+                            <Button Classes="row" Command="{Binding $parent[UserControl].((vm:ChangesViewModel)DataContext).OpenPullRequestCommand}" CommandParameter="{Binding}" Padding="6,4">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <TextBlock Text="{Binding Label}" Classes="faint" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding HeadRefName}" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+
+        <Grid RowDefinitions="Auto,Auto,*">
+            <StackPanel Grid.Row="0" IsVisible="{Binding !IsRepository}" Margin="14,16" Spacing="4">
+                <TextBlock Text="Not a git repository" Classes="muted" IsVisible="{Binding Loaded}" />
+                <TextBlock Text="{Binding Error}" Classes="faint" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+            <ListBox Grid.Row="1" Name="FileList" ItemsSource="{Binding Files}" SelectedItem="{Binding SelectedFile}" Background="Transparent" Margin="6,6"
+                     MaxHeight="260" IsVisible="{Binding HasChanges}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="svc:ChangedFile">
+                        <Grid ColumnDefinitions="14,*,Auto" ColumnSpacing="8">
+                            <TextBlock Text="{Binding Status}" Classes="mono" FontWeight="Bold" Foreground="{Binding Status, Converter={x:Static vm:TranscriptBrushes.FileStatus}}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{Binding Name}" FontSize="12" />
+                                <TextBlock Text="{Binding Directory}" Classes="faint" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{Binding Added, StringFormat=+{0}}" Foreground="{StaticResource GreenBrush}" FontSize="11" />
+                                <TextBlock Text="{Binding Removed, StringFormat=−{0}}" Foreground="{StaticResource RedBrush}" FontSize="11" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Grid.Row="1" Text="Working tree is clean." Classes="muted" Margin="14,16" IsVisible="{Binding !HasChanges}" />
+            <Border Grid.Row="2" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" IsVisible="{Binding HasSelectedFile}">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                    <ItemsControl Name="DiffList" ItemsSource="{Binding DiffLines}" Padding="0,6">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="svc:DiffLine">
+                                <Border Background="{Binding Kind, Converter={x:Static vm:TranscriptBrushes.DiffBackground}}" Padding="10,0">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Kind, Converter={x:Static vm:TranscriptBrushes.DiffMarker}}" Classes="mono" Width="10"
+                                                   Foreground="{Binding Kind, Converter={x:Static vm:TranscriptBrushes.DiffForeground}}" />
+                                        <TextBlock Text="{Binding Text}" Classes="mono" Foreground="{Binding Kind, Converter={x:Static vm:TranscriptBrushes.DiffForeground}}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

@@ -1,100 +1,45 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:VibeUi.Desktop.ViewModels"
-        xmlns:acp="using:VibeUi.Acp"
-        x:Class="VibeUi.Desktop.Views.MainWindow" x:DataType="vm:MainViewModel"
-        Title="Vibe UI" Width="980" Height="720" MinWidth="640" MinHeight="480"
-        Background="#101010" Foreground="#F5F5F5" RequestedThemeVariant="Dark">
-    <Window.Styles>
-        <Style Selector="Button.ghost">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#AAAAAA" />
-        </Style>
-        <Style Selector="ToggleButton.ghost">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#AAAAAA" />
-        </Style>
-        <Style Selector="Button.accent">
-            <Setter Property="Background" Value="#FF8205" />
-            <Setter Property="Foreground" Value="#101010" />
-        </Style>
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="#8A8A8A" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-        <Style Selector="SelectableTextBlock.mono">
-            <Setter Property="FontFamily" Value="Menlo,Consolas,DejaVu Sans Mono,monospace" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-    </Window.Styles>
+        xmlns:views="using:VibeUi.Desktop.Views"
+        x:Class="VibeUi.Desktop.Views.MainWindow" x:DataType="vm:ShellViewModel"
+        Title="Vibe UI" Width="1280" Height="820" MinWidth="820" MinHeight="520"
+        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}" RequestedThemeVariant="Dark">
+    <Grid Name="Columns" ColumnDefinitions="248,Auto,*,Auto,Auto">
+        <views:SidebarView Grid.Column="0" Name="Sidebar" />
+        <GridSplitter Grid.Column="1" Width="1" Background="{StaticResource LineBrush}" ResizeDirection="Columns" />
 
-    <DockPanel Margin="16">
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <TextBlock Name="WorkspaceLabel" Text="{Binding WorkspacePath}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           MaxWidth="380" ToolTip.Tip="{Binding WorkspacePath}" />
-                <Button Name="ChooseWorkspaceButton" Content="Choose folder…" Classes="ghost" Click="ChooseWorkspace"
-                        IsEnabled="{Binding !IsBusy}" AutomationProperties.Name="Choose workspace folder" />
+        <!-- Centre: the selected thread, or a state screen -->
+        <Panel Grid.Column="2">
+            <ContentControl Name="ThreadHost" Content="{Binding SelectedThread}" IsVisible="{Binding ShowThread}">
+                <ContentControl.ContentTemplate>
+                    <DataTemplate x:DataType="vm:ThreadViewModel">
+                        <views:ThreadView />
+                    </DataTemplate>
+                </ContentControl.ContentTemplate>
+            </ContentControl>
+
+            <!-- Empty state: no projects -->
+            <StackPanel Name="EmptyState" IsVisible="{Binding ShowEmptyState}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="14" MaxWidth="440">
+                <TextBlock Text="No projects yet" Classes="title" TextAlignment="Center" />
+                <Button Content="Add a folder…" Classes="primary" HorizontalAlignment="Center" Click="AddProjectClick" />
             </StackPanel>
-            <ComboBox Grid.Column="1" Name="ModeBox" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}"
-                      IsEnabled="{Binding IsReady}" MinWidth="150" PlaceholderText="Mode" AutomationProperties.Name="Session mode">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="acp:SessionMode">
-                        <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Description}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ComboBox Grid.Column="2" Name="ModelBox" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
-                      IsEnabled="{Binding IsReady}" MinWidth="190" PlaceholderText="Model" AutomationProperties.Name="Model">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="acp:ConfigOptionChoice">
-                        <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Description}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <Button Grid.Column="3" Content="New session" Classes="ghost" Command="{Binding NewSessionCommand}" />
-            <ToggleButton Grid.Column="4" Content="Thoughts" Classes="ghost" IsChecked="{Binding ShowThoughts}"
-                          ToolTip.Tip="Show the model's reasoning in the transcript" />
-            <Button Grid.Column="5" Content="Sign out" Classes="ghost" Command="{Binding SignOutCommand}" ToolTip.Tip="Remove the Mistral credentials Vibe stored" />
-        </Grid>
 
-        <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,12,0,0">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBlock Name="StatusLabel" Text="{Binding Status}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding UsageText}" Classes="muted" VerticalAlignment="Center" />
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ShowSession}">
-                <TextBox Name="PromptBox" Text="{Binding PromptText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="44" MaxHeight="180"
-                         PlaceholderText="Ask Vibe about this folder. Enter sends, Shift+Enter adds a line."
-                         KeyDown="PromptKeyDown" AutomationProperties.Name="Prompt" />
-                <Button Grid.Column="1" Name="SendButton" Content="Send" Classes="accent" Command="{Binding SendCommand}" VerticalAlignment="Bottom" />
-                <Button Grid.Column="2" Name="StopButton" Content="Stop" Command="{Binding StopCommand}" VerticalAlignment="Bottom" IsVisible="{Binding IsWorking}" />
-            </Grid>
-        </StackPanel>
-
-        <Panel>
-            <StackPanel Name="InstallPanel" IsVisible="{Binding !IsInstalled}" Spacing="12" MaxWidth="560" VerticalAlignment="Center">
-                <TextBlock Text="Mistral Vibe is not installed" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock TextWrapping="Wrap" TextAlignment="Center"
-                           Text="Vibe UI drives the vibe-acp program that ships with Mistral Vibe. Install Vibe, then connect again. VIBE_ACP_EXECUTABLE can point at a specific executable." />
+            <!-- Not installed -->
+            <StackPanel Name="InstallPanel" IsVisible="{Binding ShowInstall}" Spacing="12" MaxWidth="560" VerticalAlignment="Center">
+                <TextBlock Text="Mistral Vibe is not installed" Classes="title" TextAlignment="Center" />
+                <TextBlock TextWrapping="Wrap" TextAlignment="Center" Classes="muted" Text="Install it, then connect again. Or set the path in Settings." />
                 <SelectableTextBlock Text="{Binding InstallCommand}" Classes="mono" HorizontalAlignment="Center" />
-                <Button Content="Connect again" Command="{Binding ConnectCommand}" HorizontalAlignment="Center" />
+                <Button Content="Connect again" Classes="outline" Command="{Binding ReconnectCommand}" HorizontalAlignment="Center" />
             </StackPanel>
 
-            <StackPanel Name="ConnectPanel" IsVisible="{Binding ShowConnectPanel}" Spacing="12" MaxWidth="480" VerticalAlignment="Center">
-                <TextBlock Text="{Binding AgentDescription}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" />
-                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3" />
-                <Button Content="Connect" Command="{Binding ConnectCommand}" HorizontalAlignment="Center" IsVisible="{Binding !IsBusy}" />
-            </StackPanel>
-
-            <StackPanel Name="SignInPanel" IsVisible="{Binding NeedsSignIn}" Spacing="16" MaxWidth="480" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Button Name="SignInButton" Command="{Binding SignInCommand}" IsVisible="{Binding !IsSigningIn}"
+            <!-- Sign in -->
+            <StackPanel Name="SignInPanel" IsVisible="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowSignIn}" Spacing="16" MaxWidth="480" VerticalAlignment="Center" HorizontalAlignment="Center"
+                        DataContext="{Binding ActiveConnection}" x:DataType="vm:AgentConnection">
+                <Button Name="SignInButton" Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).SignInCommand}" IsVisible="{Binding !IsSigningIn}"
                         Width="144" Height="144" HorizontalAlignment="Center"
                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                        Background="#1C1C1C" BorderBrush="#383838" BorderThickness="1" CornerRadius="0"
+                        Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="16"
                         AutomationProperties.Name="Sign in to Mistral">
                     <StackPanel Spacing="16">
                         <Canvas Width="70" Height="50" HorizontalAlignment="Center" IsHitTestVisible="False">
@@ -104,94 +49,68 @@
                             <Path Fill="#FA500F" Data="M10,30 H20 V40 H10 Z M30,30 H40 V40 H30 Z M50,30 H60 V40 H50 Z" />
                             <Path Fill="#E10500" Data="M0,40 H30 V50 H0 Z M40,40 H70 V50 H40 Z" />
                         </Canvas>
-                        <TextBlock Text="Login" FontSize="16" HorizontalAlignment="Center" />
+                        <TextBlock Text="Sign in" FontSize="15" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Button>
-                <TextBlock Text="{Binding Status}" Foreground="#AAAAAA" TextWrapping="Wrap" TextAlignment="Center" />
+                <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" />
                 <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSigningIn}" Height="3" />
                 <TextBox Text="{Binding SignInUrl}" IsReadOnly="True" TextWrapping="Wrap" IsVisible="{Binding HasSignInUrl}" AutomationProperties.Name="Sign-in link" />
-                <Button Content="Open the link again" Classes="ghost" Command="{Binding OpenSignInUrlCommand}" IsVisible="{Binding HasSignInUrl}" HorizontalAlignment="Center" />
+                <Button Content="Open the link again" Classes="ghost" Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).OpenSignInUrlCommand}"
+                        IsVisible="{Binding HasSignInUrl}" HorizontalAlignment="Center" />
             </StackPanel>
 
-            <Grid Name="SessionPanel" IsVisible="{Binding ShowSession}" RowDefinitions="Auto,*,Auto" RowSpacing="8">
-                <Border Grid.Row="0" IsVisible="{Binding IsWorkspaceUntrusted}" Background="#2A2210" Padding="12" CornerRadius="4">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <TextBlock TextWrapping="Wrap" VerticalAlignment="Center"
-                                   Text="Vibe has not trusted this folder yet, so its project instructions, hooks and skills stay off." />
-                        <Button Grid.Column="1" Content="Trust this folder" Command="{Binding TrustWorkspaceCommand}" />
+            <!-- Agent failed or exited -->
+            <StackPanel Name="ConnectPanel" IsVisible="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowConnect}" Spacing="12" MaxWidth="480" VerticalAlignment="Center"
+                        DataContext="{Binding ActiveConnection}" x:DataType="vm:AgentConnection">
+                <TextBlock Text="{Binding AgentDescription}" Classes="title" TextAlignment="Center" />
+                <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" />
+                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsStarting}" Height="3" />
+                <Button Content="Connect" Classes="outline" Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ReconnectCommand}"
+                        HorizontalAlignment="Center" IsVisible="{Binding !IsStarting}" />
+            </StackPanel>
+
+            <!-- Settings -->
+            <Border Name="SettingsPanel" IsVisible="{Binding IsSettingsVisible}" Background="{StaticResource BgBrush}">
+                <StackPanel MaxWidth="560" Margin="32" Spacing="18" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Settings" Classes="title" />
+                        <Button Grid.Column="1" Classes="icon" Content="✕" Command="{Binding ToggleSettingsCommand}" AutomationProperties.Name="Close settings" />
                     </Grid>
-                </Border>
-                <ScrollViewer Grid.Row="1" Name="TranscriptScroller">
-                    <ItemsControl Name="TranscriptList" ItemsSource="{Binding Transcript}" Margin="0,0,8,0">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Spacing="10" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.DataTemplates>
-                            <DataTemplate x:DataType="vm:MessageEntry">
-                                <Border IsVisible="{Binding !IsHidden}" Padding="12" CornerRadius="6"
-                                        Background="{Binding IsUser, Converter={x:Static vm:TranscriptBrushes.Message}}">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Author}" Classes="muted" />
-                                        <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap"
-                                                             Foreground="{Binding IsThought, Converter={x:Static vm:TranscriptBrushes.MessageText}}" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                            <DataTemplate x:DataType="vm:ToolCallEntry">
-                                <Border Background="#161616" Padding="10" CornerRadius="6" BorderBrush="#2A2A2A" BorderThickness="1">
-                                    <StackPanel Spacing="6">
-                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-                                            <TextBlock Text="{Binding Icon}" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="2" Text="{Binding StatusText}" Classes="muted" VerticalAlignment="Center"
-                                                       Foreground="{Binding IsFailed, Converter={x:Static vm:TranscriptBrushes.Status}}" />
-                                            <ToggleButton Grid.Column="3" Content="Details" Classes="ghost" IsChecked="{Binding IsExpanded}" IsVisible="{Binding HasOutput}" Padding="6,2" />
-                                        </Grid>
-                                        <TextBlock Text="{Binding Locations}" Classes="muted" TextWrapping="Wrap"
-                                                   IsVisible="{Binding Locations, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                        <ScrollViewer MaxHeight="360" IsVisible="{Binding IsExpanded}">
-                                            <SelectableTextBlock Text="{Binding Output}" Classes="mono" TextWrapping="Wrap" />
-                                        </ScrollViewer>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                            <DataTemplate x:DataType="vm:PlanEntryItem">
-                                <Border Background="#141A14" Padding="12" CornerRadius="6">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="Plan" Classes="muted" />
-                                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                            <DataTemplate x:DataType="vm:NoticeEntry">
-                                <TextBlock Text="{Binding Text}" Foreground="#E0A070" TextWrapping="Wrap" />
-                            </DataTemplate>
-                        </ItemsControl.DataTemplates>
-                    </ItemsControl>
-                </ScrollViewer>
-                <Border Grid.Row="2" Name="PermissionCard" IsVisible="{Binding HasPendingPermission}" Background="#1C1C1C" BorderBrush="#FF8205" BorderThickness="1" Padding="12" CornerRadius="6">
-                    <StackPanel Spacing="8" DataContext="{Binding PendingPermission}" x:DataType="vm:PermissionRequestViewModel">
-                        <TextBlock Text="Vibe asks for permission" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Detail}" Classes="muted" TextWrapping="Wrap"
-                                   IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                        <ItemsControl ItemsSource="{Binding Options}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="8" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:PermissionChoice">
-                                    <Button Content="{Binding Name}" Command="{Binding ChooseCommand}" Classes.accent="{Binding IsAllow}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="vibe-acp executable" Classes="section" />
+                        <TextBox Text="{Binding VibeExecutable}" PlaceholderText="Leave empty to use PATH" AutomationProperties.Name="Vibe executable" />
+                        <TextBlock Text="{Binding ResolvedExecutable, StringFormat='Using: {0}'}" Classes="faint" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                </Border>
-            </Grid>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Briefing interval (minutes)" Classes="section" />
+                        <NumericUpDown Value="{Binding BriefingMinutes}" Minimum="1" Maximum="120" Increment="1" FormatString="0" Width="140" HorizontalAlignment="Left" AutomationProperties.Name="Briefing minutes" />
+                        <TextBlock Text="How often a running Chief of Staff task reports back." Classes="faint" />
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Show" Classes="section" />
+                        <CheckBox Content="Model thoughts" IsChecked="{Binding ShowThoughts}" />
+                        <CheckBox Content="Changes pane" IsChecked="{Binding IsChangesVisible}" />
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Data" Classes="section" />
+                        <SelectableTextBlock Text="{Binding DataDirectory}" Classes="mono" />
+                        <TextBlock Text="Threads, transcripts and task worktrees live here." Classes="faint" />
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Shortcuts" Classes="section" />
+                        <TextBlock Classes="muted" Text="⌘N thread · ⌘⇧N orchestrator · ⌘⇧O add project · ⌘D changes · ⌘⇧T thoughts · ⌘, settings · Esc stop" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- A project but no thread selected -->
+            <StackPanel Name="NoThreadPanel" IsVisible="{Binding ShowNoThread}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                <TextBlock Text="No thread" Classes="title" TextAlignment="Center" />
+                <Button Content="New thread" Classes="primary" HorizontalAlignment="Center" Command="{Binding NewThreadCommand}" />
+            </StackPanel>
         </Panel>
-    </DockPanel>
+
+        <GridSplitter Grid.Column="3" Width="1" Background="{StaticResource LineBrush}" ResizeDirection="Columns" IsVisible="{Binding ShowChangesPane}" />
+        <views:ChangesView Grid.Column="4" Name="Changes" Width="380" DataContext="{Binding ActiveChanges}" IsVisible="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowChangesPane}" />
+    </Grid>
 </Window>

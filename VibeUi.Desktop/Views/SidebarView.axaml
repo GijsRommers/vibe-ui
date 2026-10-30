@@ -1,0 +1,123 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VibeUi.Desktop.ViewModels"
+             x:Class="VibeUi.Desktop.Views.SidebarView" x:DataType="vm:ShellViewModel"
+             Background="{StaticResource SidebarBrush}">
+    <DockPanel>
+        <!-- Brand row -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="14,14,10,10" ColumnSpacing="8">
+            <Canvas Width="21" Height="15" VerticalAlignment="Center" IsHitTestVisible="False">
+                <Path Fill="#FFD700" Data="M3,0 H6 V3 H3 Z M15,0 H18 V3 H15 Z" />
+                <Path Fill="#FFAF00" Data="M3,3 H9 V6 H3 Z M12,3 H18 V6 H12 Z" />
+                <Path Fill="#FF8205" Data="M3,6 H18 V9 H3 Z" />
+                <Path Fill="#FA500F" Data="M3,9 H6 V12 H3 Z M9,9 H12 V12 H9 Z M15,9 H18 V12 H15 Z" />
+                <Path Fill="#E10500" Data="M0,12 H9 V15 H0 Z M12,12 H21 V15 H12 Z" />
+            </Canvas>
+            <TextBlock Grid.Column="1" Text="Vibe UI" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+            <Button Grid.Column="2" Name="AddProjectButton" Classes="icon" Content="+" ToolTip.Tip="Add a project folder (⌘⇧O)"
+                    Click="AddProject" AutomationProperties.Name="Add project" />
+        </Grid>
+
+        <!-- Pinned: the Chief of Staff -->
+        <Border DockPanel.Dock="Top" Margin="8,0,8,8" Padding="0,0,0,8" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+            <Button Name="ChiefRow" Classes="row chief" Classes.selected="{Binding Chief.IsSelected}"
+                    Command="{Binding SelectThreadCommand}" CommandParameter="{Binding Chief}" AutomationProperties.Name="Chief of Staff">
+                <Button.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuItem Header="Start over" Command="{Binding ResetChiefCommand}" />
+                    </MenuFlyout>
+                </Button.ContextFlyout>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" DataContext="{Binding Chief}" x:DataType="vm:ThreadViewModel">
+                    <Ellipse Classes="dot" Classes.working="{Binding IsWorking}" Classes.attention="{Binding NeedsAttention}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Chief of Staff" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Status}" Classes="faint" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="⟡" Foreground="{StaticResource AccentBrush}" FontSize="13" VerticalAlignment="Center" />
+                </Grid>
+            </Button>
+        </Border>
+
+        <!-- Footer: agent state -->
+        <Border DockPanel.Dock="Bottom" Padding="14,10" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" DataContext="{Binding ActiveConnection}" x:DataType="vm:AgentConnection">
+                <Ellipse Classes="dot" Classes.ready="{Binding IsReady}" Classes.attention="{Binding NeedsSignIn}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding AgentDescription}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Status}" Classes="faint" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}" />
+                </StackPanel>
+                <Button Grid.Column="2" Classes="icon" Content="⋯" ToolTip.Tip="Account" AutomationProperties.Name="Account menu">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="TopEdgeAlignedRight">
+                            <MenuItem Header="Settings" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).ToggleSettingsCommand}" />
+                            <Separator />
+                            <MenuItem Header="Sign out" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).SignOutCommand}" />
+                            <MenuItem Header="Reconnect" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).ReconnectCommand}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Projects and threads -->
+        <ScrollViewer>
+            <ItemsControl Name="ProjectList" ItemsSource="{Binding Projects}" Margin="8,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="10" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProjectViewModel">
+                        <StackPanel Spacing="1">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="2" Margin="2,0,0,2">
+                                <ToggleButton Classes="chevron" IsChecked="{Binding IsExpanded}" Padding="0" Width="22" Height="22" FontSize="11"
+                                              Content="{Binding IsExpanded, Converter={x:Static vm:SidebarGlyphs.Chevron}}" AutomationProperties.Name="Collapse project" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="section" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                           ToolTip.Tip="{Binding Path}" />
+                                <Button Grid.Column="2" Classes="icon" Content="+" ToolTip.Tip="New thread (⌘N)" AutomationProperties.Name="New thread"
+                                        Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).NewThreadCommand}" CommandParameter="{Binding}" />
+                                <Button Grid.Column="3" Classes="icon" Content="⋯" ToolTip.Tip="Project" AutomationProperties.Name="Project menu">
+                                    <Button.Flyout>
+                                        <MenuFlyout>
+                                            <MenuItem Header="New thread" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).NewThreadCommand}" CommandParameter="{Binding}" />
+                                            <MenuItem Header="New orchestrator" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).NewOrchestratorCommand}" CommandParameter="{Binding}" />
+                                            <Separator />
+                                            <MenuItem Header="Remove project" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RemoveProjectCommand}" CommandParameter="{Binding}" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding Threads}" IsVisible="{Binding IsExpanded}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ThreadViewModel">
+                                        <Button Classes="row" Classes.selected="{Binding IsSelected}" Classes.child="{Binding IsTask}"
+                                                Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).SelectThreadCommand}" CommandParameter="{Binding}"
+                                                AutomationProperties.Name="{Binding Title}">
+                                            <Button.ContextFlyout>
+                                                <MenuFlyout>
+                                                    <MenuItem Header="Delete thread" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).DeleteThreadCommand}" CommandParameter="{Binding}" />
+                                                </MenuFlyout>
+                                            </Button.ContextFlyout>
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                <Ellipse Classes="dot" Classes.working="{Binding IsWorking}" Classes.attention="{Binding NeedsAttention}" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Classes="faint" IsVisible="{Binding HasWorktree}" Text="{Binding Record.Branch}" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Text="⟡" Foreground="{StaticResource AccentBrush}" FontSize="12" VerticalAlignment="Center"
+                                                           IsVisible="{Binding IsOrchestrator}" ToolTip.Tip="Orchestrator" />
+                                                <TextBlock Grid.Column="2" Text="⟡" Foreground="{StaticResource FaintBrush}" FontSize="12" VerticalAlignment="Center"
+                                                           IsVisible="{Binding IsChiefTask}" ToolTip.Tip="Started by the Chief of Staff" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

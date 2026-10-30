@@ -12,6 +12,11 @@ public interface IAcpClient : IAsyncDisposable
 
     Task<NewSessionResponse> NewSessionAsync(NewSessionRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Resumes an earlier session in place. History arrives as session updates before this completes.</summary>
+    Task<LoadSessionResponse> LoadSessionAsync(LoadSessionRequest request, CancellationToken cancellationToken = default);
+
+    Task<ListSessionsResponse> ListSessionsAsync(ListSessionsRequest request, CancellationToken cancellationToken = default);
+
     /// <summary>Runs one prompt turn. Cancelling the token stops waiting; use <see cref="CancelAsync"/> to stop the agent.</summary>
     Task<PromptResponse> PromptAsync(PromptRequest request, CancellationToken cancellationToken = default);
 

@@ -17,13 +17,14 @@ public class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var settings = DesktopSettings.Load();
-            var model = new MainViewModel(
-                locateAgent: () => VibeAcpLauncher.Locate(),
+            var state = AppState.Load();
+            var model = new ShellViewModel(
+                state,
+                new ThreadStore(state.Directory),
+                locateAgent: () => state.VibeExecutable is { Length: > 0 } configured && File.Exists(configured) ? configured : VibeAcpLauncher.Locate(),
                 startAgent: (executable, workspace, handler, log) => VibeAcpLauncher.Start(executable, workspace, handler, log),
                 openUrl: SystemBrowser.Open,
                 dispatch: action => Dispatcher.UIThread.Post(action),
-                settings: settings,
                 clientVersion: typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0");
             desktop.MainWindow = new MainWindow { DataContext = model };
             desktop.Exit += (_, _) => model.ShutdownAsync().AsTask().Wait(TimeSpan.FromSeconds(3));

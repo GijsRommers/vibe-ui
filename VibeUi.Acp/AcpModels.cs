@@ -17,7 +17,14 @@ public sealed record ClientCapabilities(
 
 public sealed record InitializeRequest(int ProtocolVersion, ClientCapabilities ClientCapabilities, Implementation ClientInfo);
 
-public sealed record AgentCapabilities(bool LoadSession = false);
+public sealed record AgentCapabilities(bool LoadSession = false, JsonElement? SessionCapabilities = null)
+{
+    private bool Supports(string capability)
+        => SessionCapabilities is { ValueKind: JsonValueKind.Object } caps && caps.TryGetProperty(capability, out _);
+
+    public bool CanListSessions => Supports("list");
+    public bool CanCloseSessions => Supports("close");
+}
 
 public sealed record AuthMethod(string Id, string Name, string? Description = null);
 
@@ -68,6 +75,20 @@ public sealed record NewSessionResponse(
             ? status.GetString()
             : null;
 }
+
+/// <summary>Resumes an earlier session; the agent replays its history as <c>session/update</c> notifications first.</summary>
+public sealed record LoadSessionRequest(string SessionId, string Cwd, IReadOnlyList<object> McpServers);
+
+public sealed record LoadSessionResponse(
+    SessionModeState? Modes = null,
+    IReadOnlyList<SessionConfigOption>? ConfigOptions = null,
+    [property: JsonPropertyName("_meta")] JsonElement? Meta = null);
+
+public sealed record ListSessionsRequest(string? Cwd = null);
+
+public sealed record SessionInfo(string SessionId, string Cwd, string? Title = null, string? UpdatedAt = null);
+
+public sealed record ListSessionsResponse(IReadOnlyList<SessionInfo> Sessions);
 
 public sealed record ContentBlock(string Type, string? Text = null)
 {

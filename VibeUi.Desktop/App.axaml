@@ -4,5 +4,6 @@
              RequestedThemeVariant="Dark">
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://vibe-ui/Views/Theme.axaml" />
     </Application.Styles>
 </Application>

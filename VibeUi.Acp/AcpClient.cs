@@ -46,6 +46,12 @@ public sealed class AcpClient : IAcpClient
     public Task<NewSessionResponse> NewSessionAsync(NewSessionRequest request, CancellationToken cancellationToken = default)
         => RequestAsync<NewSessionResponse>("session/new", request, cancellationToken);
 
+    public Task<LoadSessionResponse> LoadSessionAsync(LoadSessionRequest request, CancellationToken cancellationToken = default)
+        => RequestAsync<LoadSessionResponse>("session/load", request, cancellationToken);
+
+    public Task<ListSessionsResponse> ListSessionsAsync(ListSessionsRequest request, CancellationToken cancellationToken = default)
+        => RequestAsync<ListSessionsResponse>("session/list", request, cancellationToken);
+
     public Task<PromptResponse> PromptAsync(PromptRequest request, CancellationToken cancellationToken = default)
         => RequestAsync<PromptResponse>("session/prompt", request, cancellationToken);
 

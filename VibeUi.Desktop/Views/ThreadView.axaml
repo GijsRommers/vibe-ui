@@ -1,0 +1,196 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VibeUi.Desktop.ViewModels"
+             xmlns:acp="using:VibeUi.Acp"
+             x:Class="VibeUi.Desktop.Views.ThreadView" x:DataType="vm:ThreadViewModel">
+    <DockPanel>
+        <!-- Header: editable title, kind, workspace -->
+        <Border DockPanel.Dock="Top" Padding="20,10,16,10" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+                <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox Name="TitleBox" Classes="plain heading" Text="{Binding Title, Mode=OneWay}" MinWidth="120" MaxWidth="520" Margin="-6,0,0,0"
+                                 KeyDown="TitleKeyDown" LostFocus="TitleLostFocus" ToolTip.Tip="Click to rename" AutomationProperties.Name="Thread title" />
+                        <Border Classes="badge" Classes.orchestrator="{Binding IsOrchestrator}" VerticalAlignment="Center" IsVisible="{Binding !IsTask}">
+                            <TextBlock Text="{Binding KindLabel}" />
+                        </Border>
+                        <Border Classes="badge" VerticalAlignment="Center" IsVisible="{Binding IsTask}">
+                            <TextBlock Text="Delegated task" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Classes="faint" Text="{Binding WorkspacePath}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding UsageText}" Classes="faint" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <ToggleButton Classes="ghost" Content="Thoughts" FontSize="12" ToolTip.Tip="Show the model's reasoning (⌘⇧T)"
+                                  IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowThoughts}" />
+                    <ToggleButton Classes="ghost" Content="Changes" FontSize="12" ToolTip.Tip="Show the git changes pane (⌘D)"
+                                  IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsChangesVisible}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Composer -->
+        <Border DockPanel.Dock="Bottom" Padding="20,8,20,16">
+            <StackPanel Spacing="8" MaxWidth="820">
+                <Border Name="PermissionCard" IsVisible="{Binding HasPendingPermission}" Classes="card" BorderBrush="{StaticResource AccentBrush}" Padding="14">
+                    <StackPanel Spacing="8" DataContext="{Binding PendingPermission}" x:DataType="vm:PermissionRequestViewModel">
+                        <TextBlock Text="Permission" Classes="section" />
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Detail}" Classes="muted" TextWrapping="Wrap" MaxHeight="120"
+                                   IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <ItemsControl ItemsSource="{Binding Options}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PermissionChoice">
+                                    <Button Content="{Binding Name}" Command="{Binding ChooseCommand}" Classes.primary="{Binding IsAllow}" Classes.outline="{Binding !IsAllow}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <Border IsVisible="{Binding IsWorkspaceUntrusted}" Background="{StaticResource AccentSoftBrush}" Padding="12,8" CornerRadius="8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <TextBlock TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12"
+                                   Text="Folder not trusted: project instructions and hooks are off." />
+                        <Button Grid.Column="1" Content="Trust" Classes="outline" Command="{Binding TrustWorkspaceCommand}" />
+                    </Grid>
+                </Border>
+                <Border Classes="card" Name="Composer" Padding="10,8,10,8">
+                    <StackPanel Spacing="6">
+                        <TextBox Name="PromptBox" Classes="plain" Text="{Binding PromptText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" MaxHeight="220"
+                                 PlaceholderText="{Binding Kind, Converter={x:Static vm:ComposerText.Placeholder}}"
+                                 KeyDown="PromptKeyDown" AutomationProperties.Name="Prompt" />
+                        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="6">
+                            <ComboBox Name="ModeBox" Classes="pill" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding HasSession}"
+                                      PlaceholderText="Mode" AutomationProperties.Name="Session mode">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="acp:SessionMode">
+                                        <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Description}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <ComboBox Grid.Column="1" Name="ModelBox" Classes="pill" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" IsEnabled="{Binding HasSession}"
+                                      PlaceholderText="Model" AutomationProperties.Name="Model">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="acp:ConfigOptionChoice">
+                                        <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Description}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <ComboBox Grid.Column="2" Name="ThinkingBox" Classes="pill" ItemsSource="{Binding ThinkingLevels}" SelectedItem="{Binding SelectedThinking}"
+                                      IsVisible="{Binding HasThinkingLevels}" IsEnabled="{Binding HasSession}" PlaceholderText="Thinking" AutomationProperties.Name="Thinking level">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="acp:ConfigOptionChoice">
+                                        <TextBlock Text="{Binding Name, Converter={x:Static vm:ComposerText.Thinking}}" ToolTip.Tip="{Binding Description}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Grid.Column="3" Name="StatusLabel" Text="{Binding Status}" Classes="faint" VerticalAlignment="Center" Margin="6,0"
+                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}" />
+                            <Button Grid.Column="4" Name="StopButton" Content="Stop" Classes="outline" Command="{Binding StopCommand}" IsVisible="{Binding IsWorking}" Padding="10,3" />
+                            <Button Grid.Column="5" Name="SendButton" Content="↑" Classes="primary send" Command="{Binding SendCommand}" ToolTip.Tip="Send (Enter)" AutomationProperties.Name="Send" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- Transcript -->
+        <Panel>
+            <StackPanel IsVisible="{Binding !Transcript.Count}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6" MaxWidth="520">
+                <TextBlock Text="{Binding Kind, Converter={x:Static vm:ComposerText.EmptyTitle}}" Classes="title" TextAlignment="Center" />
+                <TextBlock Text="{Binding Kind, Converter={x:Static vm:ComposerText.EmptyBody}}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" />
+                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsOpening}" Height="3" Width="160" Margin="0,12,0,0" />
+            </StackPanel>
+            <ScrollViewer Name="TranscriptScroller" Padding="20,16,20,0">
+                <ItemsControl Name="TranscriptList" ItemsSource="{Binding Transcript}" MaxWidth="820" HorizontalAlignment="Stretch">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="14" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate x:DataType="vm:MessageEntry">
+                            <Panel IsVisible="{Binding !IsHidden}">
+                                <!-- User: a right-aligned bubble. Agent and thoughts: flowing text with code blocks. -->
+                                <Border IsVisible="{Binding IsUser}" Background="{StaticResource Surface2Brush}" CornerRadius="14,14,4,14" Padding="14,10"
+                                        HorizontalAlignment="Right" MaxWidth="640">
+                                    <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="14" />
+                                </Border>
+                                <Border IsVisible="{Binding IsBriefing}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                                        CornerRadius="8" Padding="12,8" HorizontalAlignment="Stretch">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Briefing" Classes="section" Foreground="{StaticResource AmberBrush}" />
+                                        <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+                                    </StackPanel>
+                                </Border>
+                                <StackPanel IsVisible="{Binding IsProse}" Spacing="6">
+                                    <TextBlock Text="Thinking" Classes="faint" IsVisible="{Binding IsThought}" />
+                                    <ItemsControl ItemsSource="{Binding Blocks}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="8" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:MessageBlock">
+                                                <Panel>
+                                                    <SelectableTextBlock IsVisible="{Binding !IsCode}" Text="{Binding Text}" TextWrapping="Wrap" FontSize="14" LineHeight="22"
+                                                                         Foreground="{Binding $parent[ItemsControl].((vm:MessageEntry)DataContext).IsThought, Converter={x:Static vm:TranscriptBrushes.MessageText}}" />
+                                                    <Border IsVisible="{Binding IsCode}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8">
+                                                        <StackPanel>
+                                                            <Border IsVisible="{Binding HasLanguage}" Padding="10,4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+                                                                <TextBlock Text="{Binding Language}" Classes="faint" />
+                                                            </Border>
+                                                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Padding="10,8">
+                                                                <SelectableTextBlock Text="{Binding Text}" Classes="mono" />
+                                                            </ScrollViewer>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Panel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Panel>
+                        </DataTemplate>
+                        <DataTemplate x:DataType="vm:ToolCallEntry">
+                            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="10,7">
+                                <StackPanel Spacing="6">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                                        <TextBlock Text="{Binding Icon}" VerticalAlignment="Center" FontSize="12" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding StatusText}" Classes="faint" VerticalAlignment="Center"
+                                                   Foreground="{Binding IsFailed, Converter={x:Static vm:TranscriptBrushes.Status}}" />
+                                        <ToggleButton Grid.Column="3" Content="Details" Classes="ghost" IsChecked="{Binding IsExpanded}" IsVisible="{Binding HasOutput}" Padding="6,1" FontSize="11" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding Locations}" Classes="faint" TextWrapping="Wrap"
+                                               IsVisible="{Binding Locations, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                    <ScrollViewer MaxHeight="360" IsVisible="{Binding IsExpanded}">
+                                        <SelectableTextBlock Text="{Binding Output}" Classes="mono" TextWrapping="Wrap" />
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                        <DataTemplate x:DataType="vm:PlanEntryItem">
+                            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Plan" Classes="section" />
+                                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13" LineHeight="20" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                        <DataTemplate x:DataType="vm:NoticeEntry">
+                            <TextBlock Text="{Binding Text}" Foreground="{StaticResource AmberBrush}" TextWrapping="Wrap" FontSize="12" />
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+            </ScrollViewer>
+        </Panel>
+    </DockPanel>
+</UserControl>
