@@ -160,7 +160,7 @@ public sealed class ShellViewModelTests
         Assert.Equal("It says:\n```text\nhello world\n```\nDone.", reply.Text);
         Assert.Equal([(false, "It says:"), (true, "hello world"), (false, "Done.")], reply.Blocks.Select(block => (block.IsCode, block.Text)));
         Assert.Equal("text", reply.Blocks[1].Language);
-        Assert.Equal("1.2k of 200k context · $<0.01", thread.UsageText);
+        Assert.Equal("1.2k of 200k context", thread.UsageText);
         Assert.Equal("", thread.Status);
         Assert.Equal("Done.", thread.LastReply[^5..]);
 

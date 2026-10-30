@@ -133,19 +133,35 @@ public sealed partial class ToolCallEntry(string toolCallId) : TranscriptEntry
     [ObservableProperty] private bool _isExpanded;
 
     public bool HasOutput => Output.Length > 0;
+    public bool HasDetails => HasOutput || Locations.Length > 0;
+
+    /// <summary>The title without MCP server prefixes and with the home folder shortened.</summary>
+    public string DisplayTitle
+    {
+        get
+        {
+            var title = Title;
+            if (title.StartsWith("mcp_", StringComparison.Ordinal) && title.IndexOf('.') is > 0 and var dot)
+                title = title[(dot + 1)..];
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (home.Length > 1)
+                title = title.Replace(home + "/", "~/", StringComparison.Ordinal).Replace(home, "~", StringComparison.Ordinal);
+            return title;
+        }
+    }
 
     public string Icon => Kind switch
     {
-        "read" => "📖",
-        "edit" => "✏️",
-        "delete" => "🗑",
-        "move" => "📦",
-        "search" => "🔍",
-        "execute" => "⚙️",
-        "think" => "💭",
-        "fetch" => "🌐",
-        "switch_mode" => "🔀",
-        _ => "🔧",
+        "read" => "¶",
+        "edit" => "✎",
+        "delete" => "⌫",
+        "move" => "⇄",
+        "search" => "⌕",
+        "execute" => "›_",
+        "think" => "…",
+        "fetch" => "⇣",
+        "switch_mode" => "⇋",
+        _ => "⚙",
     };
 
     public string StatusText => Status switch
@@ -163,7 +179,10 @@ public sealed partial class ToolCallEntry(string toolCallId) : TranscriptEntry
     public void Apply(ToolCallUpdate update)
     {
         if (update.Title is { Length: > 0 } title)
+        {
             Title = title;
+            OnPropertyChanged(nameof(DisplayTitle));
+        }
         if (update.Kind is { Length: > 0 } kind)
         {
             Kind = kind;
@@ -179,9 +198,15 @@ public sealed partial class ToolCallEntry(string toolCallId) : TranscriptEntry
                 IsExpanded = true;
         }
         if (update.Locations is { Count: > 0 } locations)
+        {
             Locations = string.Join('\n', locations.Select(location => location.Line is { } line ? $"{location.Path}:{line}" : location.Path));
+            OnPropertyChanged(nameof(HasDetails));
+        }
         if (update.Content is { Count: > 0 } content)
+        {
             Output = Render(content);
+            OnPropertyChanged(nameof(HasDetails));
+        }
     }
 
     public override TranscriptRecord ToRecord() => new("tool", Title: Title, Kind: Kind, Status: Status, Output: Output, Locations: Locations);

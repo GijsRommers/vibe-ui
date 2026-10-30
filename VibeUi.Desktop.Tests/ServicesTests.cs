@@ -277,3 +277,27 @@ public sealed class CodeSearchTests
         CodeSearch.Forget(root);
     }
 }
+
+public sealed class MarkdownInlinesTests
+{
+    [Fact]
+    public void InlineSpansBecomeStyledRuns()
+    {
+        var runs = VibeUi.Desktop.Views.MarkdownInlines.Parse("Use **bold**, `code` and [a link](https://x.test) here.").ToList();
+        Assert.Equal(["Use ", "bold", ", ", "code", " and ", "a link", " here."], runs.Select(run => run.Text));
+        Assert.Equal(Avalonia.Media.FontWeight.SemiBold, runs[1].FontWeight);
+        Assert.NotNull(runs[3].Background);
+        Assert.NotNull(runs[5].TextDecorations);
+    }
+
+    [Fact]
+    public void ToolTitlesDropMcpPrefixesAndShortenHome()
+    {
+        var entry = new ToolCallEntry("c");
+        entry.Apply(new VibeUi.Acp.ToolCallUpdate("c", "mcp_vibe_ui_orchestrator.open_in_browser"));
+        Assert.Equal("open_in_browser", entry.DisplayTitle);
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        entry.Apply(new VibeUi.Acp.ToolCallUpdate("c", $"Reading {home}/notes.txt"));
+        Assert.Equal("Reading ~/notes.txt", entry.DisplayTitle);
+    }
+}

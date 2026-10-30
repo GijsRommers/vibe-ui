@@ -478,17 +478,12 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
         return Record;
     }
 
-    /// <summary>"9.7k of 200k context · $0.02": how full the model's context window is, and the session cost.</summary>
+    /// <summary>"9.7k of 200k context": how full the model's context window is.</summary>
     public static string FormatUsage(UsageSessionUpdate usage)
     {
         var text = usage.Size > 0
             ? string.Create(CultureInfo.InvariantCulture, $"{Compact(usage.Used)} of {Compact(usage.Size)} context")
             : string.Create(CultureInfo.InvariantCulture, $"{Compact(usage.Used)} context");
-        if (usage.Cost is { } cost)
-        {
-            var symbol = cost.Currency switch { "USD" => "$", "EUR" => "€", "GBP" => "£", var other => other + " " };
-            text += string.Create(CultureInfo.InvariantCulture, $" · {symbol}{(cost.Amount < 0.01 && cost.Amount > 0 ? "<0.01" : cost.Amount.ToString("0.00", CultureInfo.InvariantCulture))}");
-        }
         return text;
 
         static string Compact(long tokens) => tokens switch
