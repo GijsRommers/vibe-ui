@@ -55,18 +55,27 @@ public static class VibeAcpLauncher
                 standardError?.Invoke(args.Data);
         };
         process.BeginErrorReadLine();
+        // The agent must not outlive the window, however the window goes away (SIGTERM, unhandled crash).
+        EventHandler onExit = (_, _) => Kill(process);
+        AppDomain.CurrentDomain.ProcessExit += onExit;
         return new AcpClient(process.StandardOutput.BaseStream, process.StandardInput.BaseStream, handler, () =>
         {
-            try
-            {
-                if (!process.HasExited)
-                    process.Kill(entireProcessTree: true);
-            }
-            catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
-            {
-            }
+            AppDomain.CurrentDomain.ProcessExit -= onExit;
+            Kill(process);
             process.Dispose();
             return ValueTask.CompletedTask;
         });
+    }
+
+    private static void Kill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+        }
     }
 }
