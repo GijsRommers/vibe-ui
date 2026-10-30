@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="VibeUi.Acp.Tests/VibeUi.Acp.Tests.csproj" />
+  <Project Path="VibeUi.Acp/VibeUi.Acp.csproj" />
+  <Project Path="VibeUi.Desktop.Tests/VibeUi.Desktop.Tests.csproj" />
+  <Project Path="VibeUi.Desktop/VibeUi.Desktop.csproj" />
+</Solution>

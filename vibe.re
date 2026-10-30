@@ -4,7 +4,7 @@
   "actions": [
     {
       "name": "restore",
-      "command": "dotnet restore vibe-re.sln",
+      "command": "dotnet restore vibe-ui.slnx",
       "description": "Restore NuGet packages.",
       "runOnWorktreeCreate": true
     },
@@ -19,9 +19,9 @@
       "description": "Run every test project."
     },
     {
-      "name": "server",
-      "command": "make server",
-      "description": "Run the server in the foreground from source.",
+      "name": "run",
+      "command": "make run",
+      "description": "Run the desktop app from source.",
       "tool": false
     }
   ]

@@ -1,50 +1,49 @@
-# Usage: make install            -> installs `vibe-re-server` into ~/.local/bin
+# Usage: make build | test | run | publish | install | uninstall
 #        make install PREFIX=/usr/local   (may need sudo)
+#
+# Vibe UI needs Mistral Vibe installed: curl -LsSf https://mistral.ai/vibe/install.sh | bash
 
 PREFIX    ?= $(HOME)/.local
 BINDIR    ?= $(PREFIX)/bin
-LIBDIR    ?= $(PREFIX)/lib/vibe-re
+LIBDIR    ?= $(PREFIX)/lib/vibe-ui
 CONFIG    ?= Release
 RID       ?= $(shell dotnet --info | awk '/RID:/ { print $$2; exit }')
 OUT       := artifacts/stage/$(RID)
 
-# Preserve a complete, isolated publish tree, including settings and native libraries.
+# A complete, isolated publish tree keeps Avalonia's native libraries next to the app.
 PUBLISH   := dotnet publish -c $(CONFIG) -r $(RID) --self-contained \
              -p:PublishSingleFile=false -p:PublishTrimmed=false -p:DebugType=None
 
-.PHONY: all build test publish install uninstall server stop clean
+.PHONY: all build test run publish install uninstall clean
 
 all: build
 
 build:
-	dotnet build vibe-re.sln -c $(CONFIG)
+	dotnet build vibe-ui.slnx -c $(CONFIG)
 
 test:
-	dotnet test vibe-re.sln -c $(CONFIG)
+	dotnet test vibe-ui.slnx -c $(CONFIG)
+
+# Runs the desktop app from source.
+run:
+	dotnet run --project VibeUi.Desktop
 
 publish:
-	$(PUBLISH) VibeRe.Server -o "$(OUT)/server"
+	$(PUBLISH) VibeUi.Desktop -o "$(OUT)/vibe-ui"
 
-# Stops a running server before replacing the installed files.
-install: publish stop
+install: publish
 	install -d "$(BINDIR)"
 	install -d "$(LIBDIR)"
-	cp -R "$(OUT)/server" "$(LIBDIR)/"
-	ln -sfn "$(abspath $(LIBDIR))/server/vibe-re-server" "$(BINDIR)/vibe-re-server"
-	@echo "Installed vibe-re-server into $(BINDIR)"
+	rm -rf "$(LIBDIR)/vibe-ui"
+	cp -R "$(OUT)/vibe-ui" "$(LIBDIR)/"
+	ln -sfn "$(abspath $(LIBDIR))/vibe-ui/vibe-ui" "$(BINDIR)/vibe-ui"
+	@echo "Installed vibe-ui into $(BINDIR)"
 	@case ":$$PATH:" in *":$(BINDIR):"*) ;; *) echo "Note: $(BINDIR) is not on your PATH." ;; esac
 
-uninstall: stop
-	rm -f "$(BINDIR)/vibe-re-server"
-	rm -rf "$(LIBDIR)/server"
-
-# Runs the server in the foreground from source, for development.
-server:
-	dotnet run --project VibeRe.Server
-
-stop:
-	@pkill -x vibe-re-server || true
+uninstall:
+	rm -f "$(BINDIR)/vibe-ui"
+	rm -rf "$(LIBDIR)/vibe-ui"
 
 clean:
-	dotnet clean vibe-re.sln
+	dotnet clean vibe-ui.slnx
 	rm -rf artifacts

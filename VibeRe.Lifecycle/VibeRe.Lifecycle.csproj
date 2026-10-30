@@ -1,3 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-    <ItemGroup><InternalsVisibleTo Include="VibeRe.Lifecycle.Tests" /></ItemGroup>
-</Project>
