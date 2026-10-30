@@ -241,7 +241,7 @@ public sealed class ProjectActionsTests
         Assert.Empty(ProjectActions.Load(Directory.CreateTempSubdirectory("vibe-ui-noactions").FullName));
 
         Assert.SkipWhen(OperatingSystem.IsWindows(), "Shell commands here are POSIX.");
-        var lines = new List<string>();
+        var lines = new System.Collections.Concurrent.ConcurrentBag<string>(); // stdout and stderr report from different threads
         var outcome = await ProjectActions.RunAsync(actions[0], project, lines.Add, CancellationToken.None);
         Assert.True(outcome.Ok, outcome.Output);
         Assert.Contains("hi there", outcome.Output);
