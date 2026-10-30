@@ -108,6 +108,10 @@
                         <TextBlock Text="{Binding UpgradeDescription, StringFormat='Upgrades run: {0}'}" Classes="faint" />
                     </StackPanel>
                     <StackPanel Spacing="6">
+                        <TextBlock Text="Default mode for new threads" Classes="section" />
+                        <ComboBox Classes="pill" ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding DefaultModeId}" MinWidth="160" AutomationProperties.Name="Default mode" />
+                    </StackPanel>
+                    <StackPanel Spacing="6">
                         <TextBlock Text="Briefing interval (minutes)" Classes="section" />
                         <NumericUpDown Value="{Binding BriefingMinutes}" Minimum="1" Maximum="120" Increment="1" FormatString="0" Width="140" HorizontalAlignment="Left" AutomationProperties.Name="Briefing minutes" />
                         <TextBlock Text="How often a running Chief of Staff task reports back." Classes="faint" />

@@ -60,7 +60,8 @@ public sealed class ShellViewModelTests
         Assert.Equal(harness.Workspace, harness.Client.Workspace);
         Assert.Equal("Mistral Vibe 2.25.0", project!.Connection.AgentDescription);
         Assert.Equal(["ask", "accept-edits", "auto-approve"], thread.Modes.Select(mode => mode.Id));
-        Assert.Equal("accept-edits", thread.SelectedMode?.Id);
+        Assert.Equal("auto-approve", thread.SelectedMode?.Id); // Vibe UI's default; Vibe itself starts in accept-edits
+        Assert.Contains("session/set_mode:auto-approve", harness.Client.Calls);
         Assert.Equal("mistral-medium-3.5", thread.SelectedModel?.Value);
         Assert.Equal("medium", thread.SelectedThinking?.Value);
         Assert.Empty(harness.Client.McpServersSeen.Single());
@@ -105,7 +106,7 @@ public sealed class ShellViewModelTests
         await WaitUntilAsync(() => shell.SelectedThread.State == ThreadStatus.Ready);
 
         Assert.True(shell.ShowThread);
-        Assert.Equal(["initialize", $"session/new:{harness.Workspace}", "authenticate:browser-auth-delegated:start", "authenticate:browser-auth-delegated:complete", $"session/new:{harness.Workspace}"],
+        Assert.Equal(["initialize", $"session/new:{harness.Workspace}", "authenticate:browser-auth-delegated:start", "authenticate:browser-auth-delegated:complete", $"session/new:{harness.Workspace}", "session/set_mode:auto-approve"],
             harness.Client.Calls);
     }
 

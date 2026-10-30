@@ -37,6 +37,9 @@ public sealed class AppState
     /// <summary>Minutes between interim briefings from the Chief of Staff's tasks.</summary>
     public int BriefingMinutes { get; set; } = 3;
 
+    /// <summary>Vibe mode id new threads start in. Vibe's own default is accept-edits.</summary>
+    public string DefaultModeId { get; set; } = "auto-approve";
+
     public static AppState Load(string? directory = null)
     {
         directory ??= DefaultDirectory;
@@ -53,6 +56,7 @@ public sealed class AppState
                     ShowChanges = snapshot.ShowChanges ?? true,
                     VibeExecutable = snapshot.VibeExecutable,
                     BriefingMinutes = snapshot.BriefingMinutes ?? 3,
+                    DefaultModeId = snapshot.DefaultModeId ?? "auto-approve",
                 };
             return Migrate(directory);
         }
@@ -84,7 +88,7 @@ public sealed class AppState
         try
         {
             System.IO.Directory.CreateDirectory(_directory);
-            var snapshot = new Snapshot(Projects, SelectedThreadId, ShowThoughts, ShowChanges, Chief, VibeExecutable, BriefingMinutes);
+            var snapshot = new Snapshot(Projects, SelectedThreadId, ShowThoughts, ShowChanges, Chief, VibeExecutable, BriefingMinutes, DefaultModeId);
             File.WriteAllText(Path.Combine(_directory, "state.json"), JsonSerializer.Serialize(snapshot, Json));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -93,7 +97,7 @@ public sealed class AppState
     }
 
     private sealed record Snapshot(List<ProjectRecord>? Projects, string? SelectedThreadId, bool ShowThoughts, bool? ShowChanges, ThreadRecord? Chief = null,
-        string? VibeExecutable = null, int? BriefingMinutes = null);
+        string? VibeExecutable = null, int? BriefingMinutes = null, string? DefaultModeId = null);
 
     private sealed record LegacySettings(string? WorkspacePath, bool ShowThoughts);
 }

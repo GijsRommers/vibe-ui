@@ -69,6 +69,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         _isChangesVisible = state.ShowChanges;
         _vibeExecutable = state.VibeExecutable ?? "";
         _briefingMinutes = Math.Max(1, state.BriefingMinutes);
+        _defaultModeId = state.DefaultModeId;
         BriefingInterval = TimeSpan.FromMinutes(_briefingMinutes);
         foreach (var record in state.Projects.Where(record => Directory.Exists(record.Path)))
         {
@@ -110,7 +111,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         var record = new ProjectRecord { Id = ChiefId, Path = workspace, Name = "Chief of Staff" };
         var connection = new AgentConnection(workspace, _locateAgent, _startAgent, _openUrl, _dispatch, _clientVersion);
         var project = new ProjectViewModel(record, connection, new ChangesViewModel(workspace, _dispatch), isChief: true);
-        var chief = new ThreadViewModel(project, saved ?? new ThreadRecord { Id = ChiefId, Kind = ThreadKind.Chief.ToString() }, ShowThoughts, McpServersFor);
+        var chief = new ThreadViewModel(project, saved ?? new ThreadRecord { Id = ChiefId, Kind = ThreadKind.Chief.ToString(), ModeId = _state.DefaultModeId }, ShowThoughts, McpServersFor);
         project.Threads.Add(chief);
         connection.SignedIn += async (_, _) =>
         {
@@ -234,6 +235,15 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     /// <summary>Settings. Saved on every change; the executable applies to agents started afterwards.</summary>
     [ObservableProperty] private string _vibeExecutable = "";
     [ObservableProperty] private int _briefingMinutes = 3;
+    [ObservableProperty] private string _defaultModeId = "auto-approve";
+
+    public IReadOnlyList<string> ModeChoices { get; } = ["auto-approve", "accept-edits", "ask", "plan"];
+
+    partial void OnDefaultModeIdChanged(string value)
+    {
+        _state.DefaultModeId = value;
+        _state.Save();
+    }
 
     public string DataDirectory => _state.Directory ?? "";
     public string ResolvedExecutable => _locateAgent() ?? "not found";
@@ -362,7 +372,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     {
         if (project is null)
             return;
-        var record = new ThreadRecord { Id = Guid.NewGuid().ToString("N"), Kind = kind.ToString() };
+        var record = new ThreadRecord { Id = Guid.NewGuid().ToString("N"), Kind = kind.ToString(), ModeId = _state.DefaultModeId };
         var thread = NewThread(project, record);
         Attach(project, thread);
         project.IsExpanded = true;
@@ -649,7 +659,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
                 Kind = ThreadKind.Task.ToString(),
                 ParentId = parent.Id,
                 Title = title,
-                ModeId = parent.SelectedMode?.Id,
+                ModeId = parent.SelectedMode?.Id ?? _state.DefaultModeId,
                 ModelId = model ?? parent.SelectedModel?.Value,
             };
             if (worktree)
