@@ -66,14 +66,25 @@ public sealed record NewSessionResponse(
     IReadOnlyList<SessionConfigOption>? ConfigOptions = null,
     [property: JsonPropertyName("_meta")] JsonElement? Meta = null)
 {
-    /// <summary>Mistral Vibe reports <c>_meta.workspace_trust.status</c> ("trusted" or "untrusted").</summary>
-    public string? WorkspaceTrustStatus
-        => Meta is { ValueKind: JsonValueKind.Object } meta
-           && meta.TryGetProperty("workspace_trust", out var trust)
-           && trust.ValueKind == JsonValueKind.Object
-           && trust.TryGetProperty("status", out var status)
-            ? status.GetString()
-            : null;
+    /// <summary>
+    /// Mistral Vibe reports <c>_meta.workspace_trust.status</c> ("trusted" or "untrusted"). A folder with
+    /// nothing to trust (no AGENTS.md, no .vibe config) is "untrusted" without <c>details</c> and offers no
+    /// decision, so that case is reported as null: there is nothing for the user to do.
+    /// </summary>
+    public string? WorkspaceTrustStatus => ReadWorkspaceTrust(Meta);
+
+    internal static string? ReadWorkspaceTrust(JsonElement? meta)
+    {
+        if (meta is not { ValueKind: JsonValueKind.Object } element
+            || !element.TryGetProperty("workspace_trust", out var trust)
+            || trust.ValueKind != JsonValueKind.Object
+            || !trust.TryGetProperty("status", out var status))
+            return null;
+        var value = status.GetString();
+        if (value == "untrusted" && (!trust.TryGetProperty("details", out var details) || details.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined))
+            return null;
+        return value;
+    }
 }
 
 /// <summary>Resumes an earlier session; the agent replays its history as <c>session/update</c> notifications first.</summary>
@@ -82,7 +93,10 @@ public sealed record LoadSessionRequest(string SessionId, string Cwd, IReadOnlyL
 public sealed record LoadSessionResponse(
     SessionModeState? Modes = null,
     IReadOnlyList<SessionConfigOption>? ConfigOptions = null,
-    [property: JsonPropertyName("_meta")] JsonElement? Meta = null);
+    [property: JsonPropertyName("_meta")] JsonElement? Meta = null)
+{
+    public string? WorkspaceTrustStatus => NewSessionResponse.ReadWorkspaceTrust(Meta);
+}
 
 public sealed record ListSessionsRequest(string? Cwd = null);
 

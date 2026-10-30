@@ -3,7 +3,7 @@
         xmlns:vm="using:VibeUi.Desktop.ViewModels"
         xmlns:views="using:VibeUi.Desktop.Views"
         x:Class="VibeUi.Desktop.Views.MainWindow" x:DataType="vm:ShellViewModel"
-        Title="Vibe UI" Width="1280" Height="820" MinWidth="820" MinHeight="520"
+        Title="Vibe UI" Icon="/Assets/vibe-ui.png" Width="1280" Height="820" MinWidth="820" MinHeight="520"
         Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}" RequestedThemeVariant="Dark">
     <Panel>
     <Grid Name="Columns" ColumnDefinitions="248,Auto,*,Auto,Auto" IsVisible="{Binding !ShowGate}">

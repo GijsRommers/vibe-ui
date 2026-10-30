@@ -77,7 +77,10 @@ public sealed class FakeAcpClient : IAcpClient
             new("thinking", "Thinking", "select", JsonSerializer.SerializeToElement("medium"), "thought_level",
                 [new ConfigOptionChoice("off", "Off"), new ConfigOptionChoice("medium", "Medium"), new ConfigOptionChoice("high", "High")]),
         };
-        var meta = JsonSerializer.SerializeToElement(new { workspace_trust = new { status = TrustStatus } });
+        var meta = JsonSerializer.SerializeToElement(new
+        {
+            workspace_trust = new { status = TrustStatus, details = TrustStatus == "untrusted" ? new { detected_files = new[] { "AGENTS.md" } } : null },
+        });
         return Task.FromResult(new NewSessionResponse(id, modes, options, meta));
     }
 

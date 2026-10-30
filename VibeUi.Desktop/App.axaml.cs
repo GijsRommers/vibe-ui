@@ -27,6 +27,7 @@ public class App : Application
                 dispatch: action => Dispatcher.UIThread.Post(action),
                 clientVersion: typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0");
             desktop.MainWindow = new MainWindow { DataContext = model };
+            MacDockIcon.Apply(Path.Combine(AppContext.BaseDirectory, "Assets", "vibe-ui.png"));
             desktop.Exit += (_, _) => model.ShutdownAsync().AsTask().Wait(TimeSpan.FromSeconds(3));
         }
 

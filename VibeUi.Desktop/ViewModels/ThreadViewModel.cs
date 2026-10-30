@@ -190,7 +190,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
                                 Transcript.Add(entry);
                         ApplyModes(loaded.Modes);
                         ApplyConfigOptions(loaded.ConfigOptions);
-                        WorkspaceTrust = loaded.Meta is { } meta ? new NewSessionResponse(saved, Meta: meta).WorkspaceTrustStatus : null;
+                        WorkspaceTrust = loaded.WorkspaceTrustStatus;
                     }
                     catch (JsonRpcException exception) when (exception.Code != JsonRpcException.AuthenticationRequired)
                     {

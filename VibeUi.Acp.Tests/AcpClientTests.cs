@@ -182,3 +182,17 @@ public sealed class AcpClientTests
         Assert.Equal("s-1", cancel.Parameters!.Value.GetProperty("sessionId").GetString());
     }
 }
+
+public sealed class WorkspaceTrustTests
+{
+    [Fact]
+    public void UntrustedWithoutADecisionIsReportedAsNothingToTrust()
+    {
+        static NewSessionResponse With(string json) => new("s", Meta: JsonSerializer.Deserialize<JsonElement>(json));
+
+        Assert.Equal("trusted", With("""{"workspace_trust":{"status":"trusted","details":null}}""").WorkspaceTrustStatus);
+        Assert.Equal("untrusted", With("""{"workspace_trust":{"status":"untrusted","details":{"detected_files":["AGENTS.md"]}}}""").WorkspaceTrustStatus);
+        Assert.Null(With("""{"workspace_trust":{"status":"untrusted","details":null}}""").WorkspaceTrustStatus);
+        Assert.Null(With("""{}""").WorkspaceTrustStatus);
+    }
+}
