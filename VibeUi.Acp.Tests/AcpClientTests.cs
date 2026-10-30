@@ -139,7 +139,7 @@ public sealed class AcpClientTests
     }
 
     [Fact]
-    public async Task AuthenticateMergesArgumentsNextToTheMethodId()
+    public async Task AuthenticatePutsItsArgumentsInMeta()
     {
         await using var agent = new FakeAgent();
         JsonElement? seen = null;
@@ -154,7 +154,8 @@ public sealed class AcpClientTests
         var response = await client.AuthenticateAsync("browser-auth-delegated", new Dictionary<string, object?> { ["action"] = "start" }).WaitAsync(Timeout);
 
         Assert.Equal("browser-auth-delegated", seen!.Value.GetProperty("methodId").GetString());
-        Assert.Equal("start", seen.Value.GetProperty("action").GetString());
+        Assert.False(seen.Value.TryGetProperty("action", out _)); // Agents drop unknown top-level fields; Vibe reads _meta.
+        Assert.Equal("start", seen.Value.GetProperty("_meta").GetProperty("action").GetString());
         Assert.Equal("https://example.test/login", response.Meta!.Value.GetProperty("browser-auth-delegated").GetProperty("signInUrl").GetString());
     }
 

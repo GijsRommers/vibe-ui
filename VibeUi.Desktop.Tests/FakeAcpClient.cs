@@ -34,6 +34,8 @@ public sealed class FakeAcpClient : IAcpClient
     public async Task<AuthenticateResponse> AuthenticateAsync(string methodId, IReadOnlyDictionary<string, object?>? arguments = null, CancellationToken cancellationToken = default)
     {
         var action = arguments?.GetValueOrDefault("action") as string;
+        if (action == "complete")
+            Assert.Equal("a-1", arguments!["attemptId"]);
         Calls.Add($"authenticate:{methodId}:{action}");
         if (action == "start")
             return new AuthenticateResponse(JsonSerializer.SerializeToElement(new Dictionary<string, object>

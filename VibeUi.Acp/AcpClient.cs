@@ -34,11 +34,15 @@ public sealed class AcpClient : IAcpClient
     public Task<InitializeResponse> InitializeAsync(InitializeRequest request, CancellationToken cancellationToken = default)
         => RequestAsync<InitializeResponse>("initialize", request, cancellationToken);
 
+    /// <summary>
+    /// <c>authenticate</c> only has <c>methodId</c> on the wire; method arguments (Vibe's <c>action</c> and
+    /// <c>attemptId</c>) travel in <c>_meta</c>, which agents hand to the method handler.
+    /// </summary>
     public async Task<AuthenticateResponse> AuthenticateAsync(string methodId, IReadOnlyDictionary<string, object?>? arguments = null, CancellationToken cancellationToken = default)
     {
         var parameters = new Dictionary<string, object?> { ["methodId"] = methodId };
-        foreach (var (key, value) in arguments ?? new Dictionary<string, object?>())
-            parameters[key] = value;
+        if (arguments is { Count: > 0 })
+            parameters["_meta"] = arguments;
         var result = await _connection.RequestAsync("authenticate", parameters, cancellationToken);
         return Read<AuthenticateResponse>(result) ?? new AuthenticateResponse();
     }
