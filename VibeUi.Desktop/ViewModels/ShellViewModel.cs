@@ -28,6 +28,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         "for one self-contained task (worktree=true gives it its own git worktree and branch), wait_for_task collects a result, check_task and " +
         "list_tasks report status, send_to_task continues a task's thread, cancel_task stops one. Children do not see this conversation. " +
         "Plan the work, split it into independent tasks, delegate them in parallel, wait for them, review what came back and summarise the outcome. " +
+        "list_actions/run_action run the project's declared build and test commands; list_pull_requests, pull_request_checks and create_pull_request talk to GitHub. " +
         "Do the small glue work yourself.";
 
     private readonly AppState _state;
@@ -110,7 +111,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         }
         var record = new ProjectRecord { Id = ChiefId, Path = workspace, Name = "Chief of Staff" };
         var connection = new AgentConnection(workspace, _locateAgent, _startAgent, _openUrl, _dispatch, _clientVersion);
-        var project = new ProjectViewModel(record, connection, new ChangesViewModel(workspace, _dispatch), isChief: true);
+        var project = new ProjectViewModel(record, connection, new ChangesViewModel(workspace, _dispatch), new ActionsViewModel(workspace, _dispatch), isChief: true);
         var chief = new ThreadViewModel(project, saved ?? new ThreadRecord { Id = ChiefId, Kind = ThreadKind.Chief.ToString(), ModeId = _state.DefaultModeId }, ShowThoughts, McpServersFor);
         project.Threads.Add(chief);
         connection.SignedIn += async (_, _) =>
@@ -488,7 +489,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         var connection = new AgentConnection(record.Path, _locateAgent, _startAgent, _openUrl, _dispatch, _clientVersion);
         var changes = new ChangesViewModel(record.Path, _dispatch);
         changes.OpenUrlRequested += (_, url) => _openUrl(url);
-        var project = new ProjectViewModel(record, connection, changes);
+        var project = new ProjectViewModel(record, connection, changes, new ActionsViewModel(record.Path, _dispatch));
         connection.SignedIn += async (_, _) =>
         {
             if (SelectedThread is { } thread && thread.Project == project)
@@ -674,6 +675,9 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
                 var created = await Task.Run(() => GitWorktrees.CreateAsync(project.Path, WorktreeRoot, title, cancellationToken), cancellationToken);
                 record.WorktreePath = created.Path;
                 record.Branch = created.Branch;
+                // vibe.re actions marked runOnWorktreeCreate set the checkout up (restore packages, copy .env…).
+                foreach (var setup in project.Actions.Actions.Where(action => action.RunOnWorktreeCreate))
+                    await project.Actions.RunAsync(setup, created.Path, show: false);
             }
             var child = NewThread(project, record);
             Attach(project, child);
@@ -731,6 +735,66 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
                 await child.StopAsync();
             return Describe(child);
         });
+
+    public Task<ActionOutcome> RunActionAsync(string orchestratorId, string actionName, string? projectName, CancellationToken cancellationToken)
+        => OnUiAsync(async () =>
+        {
+            var parent = FindThread(orchestratorId) ?? throw new InvalidOperationException("The orchestrator thread no longer exists.");
+            var project = ResolveProject(parent, projectName);
+            var action = project.Actions.Find(actionName)
+                         ?? throw new InvalidOperationException($"No action called \"{actionName}\" in {project.Name}. Available: {string.Join(", ", project.Actions.Actions.Select(action => action.Name))}.");
+            if (!action.Tool)
+                throw new InvalidOperationException($"The action \"{actionName}\" is not available to agents.");
+            var outcome = await project.Actions.RunAsync(action, parent.WorkspacePath == project.Path ? project.Path : parent.WorkspacePath, show: project == SelectedProject);
+            return outcome.Output.Length > 6000 ? outcome with { Output = "…" + outcome.Output[^6000..] } : outcome;
+        });
+
+    public Task<IReadOnlyList<ProjectAction>> ListActionsAsync(string orchestratorId, string? projectName)
+        => OnUiAsync(() =>
+        {
+            var parent = FindThread(orchestratorId) ?? throw new InvalidOperationException("The orchestrator thread no longer exists.");
+            return Task.FromResult<IReadOnlyList<ProjectAction>>(ResolveProject(parent, projectName).Actions.Actions.Where(action => action.Tool).ToList());
+        });
+
+    public async Task<object> GitHubAsync(string orchestratorId, string operation, string? projectName, IReadOnlyDictionary<string, string?> arguments, CancellationToken cancellationToken)
+    {
+        var (path, parent) = await OnUiAsync(() =>
+        {
+            var parent = FindThread(orchestratorId) ?? throw new InvalidOperationException("The orchestrator thread no longer exists.");
+            var project = ResolveProject(parent, projectName);
+            return Task.FromResult((parent.IsTask ? parent.WorkspacePath : project.Path, parent));
+        });
+        switch (operation)
+        {
+            case "list":
+            {
+                var (pulls, error) = await GitActions.ListPullRequestsAsync(path, cancellationToken);
+                if (error is not null)
+                    throw new InvalidOperationException(error);
+                return pulls;
+            }
+            case "checks":
+            {
+                var (json, error) = await GitActions.PullRequestChecksAsync(path, arguments.GetValueOrDefault("number") ?? throw new InvalidOperationException("Missing number."), cancellationToken);
+                return json is null ? throw new InvalidOperationException(error ?? "gh failed.") : System.Text.Json.JsonDocument.Parse(json).RootElement.Clone();
+            }
+            case "create":
+            {
+                var result = await GitActions.CreatePullRequestAsync(path, arguments.GetValueOrDefault("title") ?? "", arguments.GetValueOrDefault("body") ?? "",
+                    string.Equals(arguments.GetValueOrDefault("draft"), "true", StringComparison.OrdinalIgnoreCase), cancellationToken);
+                if (!result.Ok)
+                    throw new InvalidOperationException(result.Message);
+                _ = OnUiAsync(async () =>
+                {
+                    await parent.Project.Changes.RefreshAsync();
+                    return true;
+                });
+                return new { url = result.Message };
+            }
+            default:
+                throw new InvalidOperationException($"Unknown GitHub operation {operation}.");
+        }
+    }
 
     private ThreadViewModel? FindThread(string id)
         => id == ChiefId ? Chief : Projects.SelectMany(project => project.Threads).FirstOrDefault(thread => thread.Id == id);

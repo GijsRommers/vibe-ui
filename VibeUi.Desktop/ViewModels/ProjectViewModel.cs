@@ -7,14 +7,18 @@ namespace VibeUi.Desktop.ViewModels;
 /// <summary>A folder in the sidebar: its threads, its agent process and its git changes.</summary>
 public sealed partial class ProjectViewModel : ObservableObject
 {
-    public ProjectViewModel(ProjectRecord record, AgentConnection connection, ChangesViewModel changes, bool isChief = false)
+    public ProjectViewModel(ProjectRecord record, AgentConnection connection, ChangesViewModel changes, ActionsViewModel actions, bool isChief = false)
     {
         Record = record;
         Connection = connection;
         Changes = changes;
+        Actions = actions;
         IsChief = isChief;
         _isExpanded = record.IsExpanded;
     }
+
+    /// <summary>The project's vibe.re actions and their output drawer.</summary>
+    public ActionsViewModel Actions { get; }
 
     /// <summary>The hidden workspace that hosts the Chief of Staff; not listed in the sidebar.</summary>
     public bool IsChief { get; }

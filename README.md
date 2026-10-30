@@ -25,7 +25,12 @@ The server, CLI, web and mobile pieces of the earlier VibeRe project live on in
 - **Changes pane.** The project's branch, changed files with +/− counts, and a coloured diff of the
   selected file. It refreshes after every turn. Commit all, push, open a pull request and see the
   open pull requests, through `git` and the GitHub CLI (`gh`).
-- **Settings** (⌘,): the `vibe-acp` executable, the briefing interval, what to show.
+- **Actions.** Commands a project declares in `vibe.re` (build, test, dev server) run from buttons in
+  the thread header, with their output in a drawer above the composer. Actions marked
+  `runOnWorktreeCreate` set up new task worktrees. Agents get them as `list_actions` and
+  `run_action`, plus `list_pull_requests`, `pull_request_checks` and `create_pull_request` through
+  `gh`.
+- **Settings** (⌘,): the `vibe-acp` executable, default mode, briefing interval, Vibe updates.
 - **Orchestrator threads.** A thread that gets extra tools from Vibe UI itself: `delegate_task`,
   `wait_for_task`, `check_task`, `list_tasks`, `send_to_task` and `cancel_task`. Each delegated task
   is a child thread with its own Vibe session, nested under the orchestrator in the sidebar, and can
@@ -113,6 +118,20 @@ directory, so it has no code of its own to edit.
 thread under `threads/`, in the per-user application data folder (`~/.config/vibe-ui` on macOS and
 Linux, `%APPDATA%\vibe-ui` on Windows). Worktrees go under `worktrees/` next to them. Sessions
 themselves stay in Vibe's own history.
+
+### Actions file
+
+```jsonc
+// vibe.re, in the project root
+{
+  "actions": [
+    { "name": "restore", "command": "dotnet restore", "runOnWorktreeCreate": true },
+    { "name": "build",   "command": "make build" },
+    { "name": "test",    "command": "make test" },
+    { "name": "run",     "command": "make run", "tool": false }   // people only, not agents
+  ]
+}
+```
 
 ## Develop
 

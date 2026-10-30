@@ -216,3 +216,40 @@ public sealed class VibeUpdaterTests
         Assert.Equal(VibeAcpLauncher.InstallCommand, plan!.Description); // no uv receipt under this home: install script
     }
 }
+
+public sealed class ProjectActionsTests
+{
+    [Fact]
+    public async Task ActionsLoadFromVibeReAndRunThroughTheShell()
+    {
+        var project = Directory.CreateTempSubdirectory("vibe-ui-actions").FullName;
+        File.WriteAllText(Path.Combine(project, "vibe.re"), """
+            {
+              // comments and trailing commas are fine
+              "actions": [
+                { "name": "hello", "command": "echo hi there && echo done >&2", "description": "Says hi" },
+                { "name": "setup", "command": "touch setup-ran", "runOnWorktreeCreate": true, "tool": false },
+                { "name": "", "command": "ignored" },
+              ]
+            }
+            """);
+
+        var actions = ProjectActions.Load(project);
+        Assert.Equal(["hello", "setup"], actions.Select(action => action.Name));
+        Assert.True(actions[1].RunOnWorktreeCreate);
+        Assert.False(actions[1].Tool);
+        Assert.Empty(ProjectActions.Load(Directory.CreateTempSubdirectory("vibe-ui-noactions").FullName));
+
+        Assert.SkipWhen(OperatingSystem.IsWindows(), "Shell commands here are POSIX.");
+        var lines = new List<string>();
+        var outcome = await ProjectActions.RunAsync(actions[0], project, lines.Add, CancellationToken.None);
+        Assert.True(outcome.Ok, outcome.Output);
+        Assert.Contains("hi there", outcome.Output);
+        Assert.Contains("done", outcome.Output);
+        Assert.Contains("hi there", lines);
+
+        var failing = await ProjectActions.RunAsync(new ProjectAction("boom", "exit 3"), project, null, CancellationToken.None);
+        Assert.Equal(3, failing.ExitCode);
+        Assert.False(failing.Ok);
+    }
+}

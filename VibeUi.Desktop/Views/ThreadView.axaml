@@ -2,11 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VibeUi.Desktop.ViewModels"
              xmlns:acp="using:VibeUi.Acp"
+             xmlns:svc="using:VibeUi.Desktop.Services"
              x:Class="VibeUi.Desktop.Views.ThreadView" x:DataType="vm:ThreadViewModel">
     <DockPanel>
         <!-- Header: editable title, kind, workspace -->
         <Border DockPanel.Dock="Top" Padding="20,10,16,10" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
                 <StackPanel Spacing="2">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBox Name="TitleBox" Classes="plain heading" Text="{Binding Title, Mode=OneWay}" MinWidth="120" MaxWidth="520" Margin="-6,0,0,0"
@@ -20,9 +21,27 @@
                     </StackPanel>
                     <TextBlock Classes="faint" Text="{Binding WorkspacePath}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !IsChief}" />
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding UsageText}" Classes="faint" VerticalAlignment="Center"
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding Project.Actions.Actions}" VerticalAlignment="Center" Margin="0,0,10,0" IsVisible="{Binding !IsChief}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="2" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="svc:ProjectAction">
+                            <Button Classes="ghost small" ToolTip.Tip="{Binding Command}"
+                                    Command="{Binding $parent[UserControl].((vm:ThreadViewModel)DataContext).Project.Actions.RunCommand}" CommandParameter="{Binding}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="▶" FontSize="9" VerticalAlignment="Center" Opacity="0.7" />
+                                    <TextBlock Text="{Binding Name}" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Grid.Column="2" Text="{Binding UsageText}" Classes="faint" VerticalAlignment="Center"
                            ToolTip.Tip="How much of the model's context window this thread uses, and what the session has cost" />
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <ToggleButton Classes="ghost" Content="Thoughts" FontSize="12" ToolTip.Tip="Show the model's reasoning (⌘⇧T)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowThoughts}" />
                     <ToggleButton Classes="ghost" Content="Changes" FontSize="12" ToolTip.Tip="Show the git changes pane (⌘D)"
@@ -60,6 +79,21 @@
                                    Text="Folder not trusted: project instructions and hooks are off." />
                         <Button Grid.Column="1" Content="Trust" Classes="outline" Command="{Binding TrustWorkspaceCommand}" />
                     </Grid>
+                </Border>
+                <Border Name="ActionDrawer" Classes="card" Padding="0" IsVisible="{Binding $parent[UserControl].((vm:ThreadViewModel)DataContext).Project.Actions.IsDrawerOpen}"
+                        DataContext="{Binding Project.Actions}" x:DataType="vm:ActionsViewModel">
+                    <StackPanel DataContext="{Binding CurrentRun}" x:DataType="vm:ActionRun">
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" Margin="12,6,6,6">
+                            <TextBlock Text="▶" FontSize="10" VerticalAlignment="Center" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding Summary}" Classes="faint" VerticalAlignment="Center" />
+                            <Button Grid.Column="3" Content="Stop" Classes="ghost small" Command="{Binding StopCommand}" IsVisible="{Binding IsRunning}" />
+                            <Button Grid.Column="4" Content="✕" Classes="icon" Command="{Binding $parent[Border].((vm:ActionsViewModel)DataContext).CloseDrawerCommand}" />
+                        </Grid>
+                        <ScrollViewer Name="ActionOutput" MaxHeight="220" Padding="12,0,12,10">
+                            <SelectableTextBlock Text="{Binding Output}" Classes="mono" TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </StackPanel>
                 </Border>
                 <TextBlock Name="StatusLabel" Text="{Binding Status}" Classes="faint" Margin="4,0" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}"
                            IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

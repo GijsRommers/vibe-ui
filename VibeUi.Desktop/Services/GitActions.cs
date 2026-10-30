@@ -75,6 +75,13 @@ public static class GitActions
         }
     }
 
+    /// <summary>Raw JSON from <c>gh pr view</c> with checks and review state, or an error.</summary>
+    public static async Task<(string? Json, string? Error)> PullRequestChecksAsync(string directory, string number, CancellationToken cancellationToken = default)
+    {
+        var result = await RunGhAsync(directory, ["pr", "view", number, "--json", "number,title,state,isDraft,mergeable,reviewDecision,statusCheckRollup,url,headRefName"], cancellationToken);
+        return result.ExitCode == 0 ? (result.Output, null) : (null, FirstLine(result.Error ?? result.Output, "gh pr view failed."));
+    }
+
     /// <summary>Opens a pull request for the current branch. Pushes first when the branch has no upstream.</summary>
     public static async Task<ActionResult> CreatePullRequestAsync(string directory, string title, string body, bool draft, CancellationToken cancellationToken = default)
     {

@@ -652,3 +652,39 @@ public sealed class VibeUpdateTests
         await shell.ShutdownAsync();
     }
 }
+
+public sealed class ActionToolTests
+{
+    [Fact]
+    public async Task OrchestratorCanListAndRunProjectActions()
+    {
+        Assert.SkipWhen(OperatingSystem.IsWindows(), "Shell commands here are POSIX.");
+        var directory = Directory.CreateTempSubdirectory("vibe-ui-actiontools").FullName;
+        var workspace = Directory.CreateTempSubdirectory("vibe-ui-actiontools-project").FullName;
+        File.WriteAllText(Path.Combine(workspace, "vibe.re"), """{"actions":[{"name":"test","command":"echo all green"},{"name":"run","command":"echo nope","tool":false}]}""");
+        var shell = new ShellViewModel(AppState.Load(directory), new ThreadStore(directory),
+            () => "/usr/local/bin/vibe-acp",
+            (_, cwd, handler, _) => new FakeAcpClient { Handler = handler, Workspace = cwd },
+            _ => { },
+            action => action(),
+            latestVibeVersion: _ => Task.FromResult<string?>(null));
+        await shell.AddProjectAsync(workspace);
+        await shell.NewOrchestratorAsync(shell.SelectedProject);
+        var orchestrator = shell.SelectedThread!;
+
+        var listed = await shell.ListActionsAsync(orchestrator.Id, null);
+        Assert.Equal(["test"], listed.Select(action => action.Name)); // "run" is not offered to agents
+
+        var outcome = await shell.RunActionAsync(orchestrator.Id, "test", null, CancellationToken.None);
+        Assert.True(outcome.Ok);
+        Assert.Contains("all green", outcome.Output);
+        Assert.True(shell.SelectedProject!.Actions.IsDrawerOpen);
+        Assert.Equal("done", shell.SelectedProject.Actions.CurrentRun!.Summary);
+
+        var missing = await Assert.ThrowsAsync<InvalidOperationException>(() => shell.RunActionAsync(orchestrator.Id, "deploy", null, CancellationToken.None));
+        Assert.Contains("test", missing.Message);
+        var hidden = await Assert.ThrowsAsync<InvalidOperationException>(() => shell.RunActionAsync(orchestrator.Id, "run", null, CancellationToken.None));
+        Assert.Contains("not available", hidden.Message);
+        await shell.ShutdownAsync();
+    }
+}

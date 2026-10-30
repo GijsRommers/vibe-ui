@@ -19,7 +19,9 @@ public sealed class SnapshotAndIntegrationTests
         Assert.SkipWhen(string.IsNullOrEmpty(directory), "Set VIBE_UI_SNAPSHOT_DIR to write PNG snapshots.");
         Directory.CreateDirectory(directory!);
 
-        var (shell, client, _) = TestShell.Build(client => client.TrustStatus = "untrusted");
+        var (shell, client, workspace) = TestShell.Build(client => client.TrustStatus = "untrusted");
+        File.WriteAllText(Path.Combine(workspace, "vibe.re"), """{"actions":[{"name":"build","command":"echo built"},{"name":"test","command":"echo 12 passed"}]}""");
+        shell.Projects[0].Actions.Reload();
         var window = new MainWindow { DataContext = shell, Width = 1280, Height = 820 };
         window.Show();
         try
@@ -34,6 +36,8 @@ public sealed class SnapshotAndIntegrationTests
             await client.SendUpdateAsync("""{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"note.txt contains one line:\n\n```text\nhello world\n```\n\nNothing else is in there."}}""");
             await client.SendUpdateAsync("""{"sessionUpdate":"usage_update","used":5029,"size":200000,"cost":{"amount":0.0053655,"currency":"USD"}}""");
             shell.ShowThoughts = true;
+            if (!OperatingSystem.IsWindows())
+                await shell.Projects[0].Actions.RunAsync(shell.Projects[0].Actions.Actions[1], workspace);
             await shell.NewOrchestratorAsync(shell.SelectedProject);
             await shell.SelectThreadAsync(thread);
             _ = thread.RequestPermissionAsync(new RequestPermissionRequest("s-1", new ToolCallUpdate("c2", "bash: npm test"),

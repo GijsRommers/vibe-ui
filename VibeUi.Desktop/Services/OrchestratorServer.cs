@@ -22,6 +22,14 @@ public interface IOrchestratorHost
     Task<TaskInfo?> SendAsync(string orchestratorId, string taskId, string prompt, CancellationToken cancellationToken);
 
     Task<TaskInfo?> CancelAsync(string orchestratorId, string taskId);
+
+    /// <summary>Runs a vibe.re action in a project and returns its exit code and output.</summary>
+    Task<ActionOutcome> RunActionAsync(string orchestratorId, string actionName, string? project, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ProjectAction>> ListActionsAsync(string orchestratorId, string? project);
+
+    /// <summary>GitHub, through gh: open pull requests, the checks of one, or a new one for the current branch.</summary>
+    Task<object> GitHubAsync(string orchestratorId, string operation, string? project, IReadOnlyDictionary<string, string?> arguments, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -237,6 +245,11 @@ public sealed class OrchestratorServer : IAsyncDisposable
                 "list_tasks" => await _host.ListAsync(orchestratorId),
                 "send_to_task" => await _host.SendAsync(orchestratorId, Required("task_id"), Required("prompt"), cancellationToken) ?? throw new McpError(-32602, "Unknown task_id."),
                 "cancel_task" => await _host.CancelAsync(orchestratorId, Required("task_id")) ?? throw new McpError(-32602, "Unknown task_id."),
+                "run_action" => await _host.RunActionAsync(orchestratorId, Required("name"), arguments["project"]?.GetValue<string>(), cancellationToken),
+                "list_actions" => await _host.ListActionsAsync(orchestratorId, arguments["project"]?.GetValue<string>()),
+                "list_pull_requests" => await _host.GitHubAsync(orchestratorId, "list", arguments["project"]?.GetValue<string>(), Strings(arguments), cancellationToken),
+                "pull_request_checks" => await _host.GitHubAsync(orchestratorId, "checks", arguments["project"]?.GetValue<string>(), Strings(arguments), cancellationToken),
+                "create_pull_request" => await _host.GitHubAsync(orchestratorId, "create", arguments["project"]?.GetValue<string>(), Strings(arguments), cancellationToken),
                 _ => throw new McpError(-32602, $"Unknown tool: {name}"),
             };
             return ToolResult(JsonSerializer.Serialize(result, Json), isError: false);
@@ -246,6 +259,9 @@ public sealed class OrchestratorServer : IAsyncDisposable
             return ToolResult(exception.Message, isError: true);
         }
     }
+
+    private static IReadOnlyDictionary<string, string?> Strings(JsonObject arguments)
+        => arguments.ToDictionary(pair => pair.Key, pair => pair.Value?.ToString());
 
     private static JsonObject ToolResult(string text, bool isError)
         => new()
@@ -281,7 +297,31 @@ public sealed class OrchestratorServer : IAsyncDisposable
                 ["task_id"] = Property("string", "The task_id from delegate_task."),
                 ["prompt"] = Property("string", "The follow-up instructions."),
             }, ["task_id", "prompt"]),
-        Tool("cancel_task", "Stop a running task.", new JsonObject { ["task_id"] = Property("string", "The task_id from delegate_task.") }, ["task_id"]));
+        Tool("cancel_task", "Stop a running task.", new JsonObject { ["task_id"] = Property("string", "The task_id from delegate_task.") }, ["task_id"]),
+        Tool("list_actions", "List the project's declared actions (from vibe.re): build, test, dev commands you can run with run_action.",
+            new JsonObject { ["project"] = Property("string", "Project name; required for the Chief of Staff.") }, []),
+        Tool("run_action", "Run one of the project's declared actions and return its exit code and output. Use it to build or test after tasks finish.",
+            new JsonObject
+            {
+                ["name"] = Property("string", "The action name from list_actions."),
+                ["project"] = Property("string", "Project name; required for the Chief of Staff."),
+            }, ["name"]),
+        Tool("list_pull_requests", "Open pull requests of the project's GitHub repository.",
+            new JsonObject { ["project"] = Property("string", "Project name; required for the Chief of Staff.") }, []),
+        Tool("pull_request_checks", "CI check results and review state of a pull request.",
+            new JsonObject
+            {
+                ["number"] = Property("string", "The pull request number."),
+                ["project"] = Property("string", "Project name; required for the Chief of Staff."),
+            }, ["number"]),
+        Tool("create_pull_request", "Open a pull request for the project's current branch (pushes first when needed).",
+            new JsonObject
+            {
+                ["title"] = Property("string", "Pull request title."),
+                ["body"] = Property("string", "Pull request description (markdown)."),
+                ["draft"] = Property("boolean", "Open as a draft. Default false."),
+                ["project"] = Property("string", "Project name; required for the Chief of Staff."),
+            }, ["title"]));
 
     private static JsonObject Tool(string name, string description, JsonObject properties, string[] required)
         => new()
