@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VibeUi.Desktop.ViewModels"
+             x:Class="VibeUi.Desktop.Views.BrowserView" x:DataType="vm:BrowserViewModel"
+             Background="{StaticResource SidebarBrush}">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="8,8,8,8" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="4">
+                <Button Classes="icon" Content="‹" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip.Tip="Back" />
+                <Button Grid.Column="1" Classes="icon" Content="›" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip.Tip="Forward" />
+                <Button Grid.Column="2" Classes="icon" Content="↻" Command="{Binding RefreshCommand}" ToolTip.Tip="Reload" IsVisible="{Binding !IsLoading}" />
+                <Button Grid.Column="2" Classes="icon" Content="✕" Command="{Binding StopCommand}" ToolTip.Tip="Stop" IsVisible="{Binding IsLoading}" />
+                <Border Grid.Column="3" Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="8,0">
+                    <TextBox Name="AddressBox" Classes="plain" Text="{Binding AddressText}" FontSize="12" Padding="0,5" VerticalContentAlignment="Center"
+                             PlaceholderText="localhost:3000" AutomationProperties.Name="Address" />
+                </Border>
+                <Button Grid.Column="4" Classes="icon" Content="↗" Command="{Binding OpenExternallyCommand}" ToolTip.Tip="Open in your browser" />
+            </Grid>
+        </Border>
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="2" />
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Classes="faint" Margin="12,6" TextWrapping="Wrap"
+                   IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Panel Name="WebHost" Background="#FFFFFF" />
+    </DockPanel>
+</UserControl>

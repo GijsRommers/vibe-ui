@@ -52,6 +52,8 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <ToggleButton Classes="ghost" Content="Thoughts" FontSize="12" ToolTip.Tip="Show the model's reasoning (⌘⇧T)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowThoughts}" />
+                    <ToggleButton Classes="ghost" Content="Browser" FontSize="12" ToolTip.Tip="Show the built-in browser (⌘B)" IsVisible="{Binding !IsChief}"
+                                  IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsBrowserVisible}" />
                     <ToggleButton Classes="ghost" Content="Changes" FontSize="12" ToolTip.Tip="Show the git changes pane (⌘D)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsChangesVisible}" />
                 </StackPanel>

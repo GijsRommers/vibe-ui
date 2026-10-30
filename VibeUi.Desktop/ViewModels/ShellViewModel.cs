@@ -69,6 +69,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         _serverFactory = serverFactory ?? (host => new OrchestratorServer(host));
         _showThoughts = state.ShowThoughts;
         _isChangesVisible = state.ShowChanges;
+        _isBrowserVisible = state.ShowBrowser;
         _vibeExecutable = state.VibeExecutable ?? "";
         _briefingMinutes = Math.Max(1, state.BriefingMinutes);
         _defaultModeId = state.DefaultModeId;
@@ -112,7 +113,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         }
         var record = new ProjectRecord { Id = ChiefId, Path = workspace, Name = "Chief of Staff" };
         var connection = new AgentConnection(workspace, _locateAgent, _startAgent, _openUrl, _dispatch, _clientVersion);
-        var project = new ProjectViewModel(record, connection, new ChangesViewModel(workspace, _dispatch), new ActionsViewModel(workspace, _dispatch), isChief: true);
+        var project = new ProjectViewModel(record, connection, new ChangesViewModel(workspace, _dispatch), new ActionsViewModel(workspace, _dispatch), new BrowserViewModel(_openUrl), isChief: true);
         var chief = new ThreadViewModel(project, saved ?? new ThreadRecord { Id = ChiefId, Kind = ThreadKind.Chief.ToString(), ModeId = _state.DefaultModeId }, ShowThoughts, McpServersFor);
         project.Threads.Add(chief);
         connection.SignedIn += async (_, _) =>
@@ -157,7 +158,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     private ThreadViewModel? _selectedThread;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActiveConnection), nameof(ActiveChanges), nameof(HasProjects), nameof(ShowEmptyState), nameof(ShowChangesPane),
+    [NotifyPropertyChangedFor(nameof(ActiveConnection), nameof(ActiveChanges), nameof(ActiveBrowser), nameof(ShowBrowserPane), nameof(HasProjects), nameof(ShowEmptyState), nameof(ShowChangesPane),
         nameof(ShowGate), nameof(ShowProgress), nameof(ShowInstall), nameof(ShowSignIn), nameof(ShowConnect), nameof(ShowThread), nameof(ShowNoThread))]
     private ProjectViewModel? _selectedProject;
 
@@ -168,6 +169,22 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     private bool _isChangesVisible;
 
     [ObservableProperty] private bool _isSettingsVisible;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowBrowserPane))]
+    private bool _isBrowserVisible;
+
+    public BrowserViewModel? ActiveBrowser => SelectedProject?.Browser;
+    public bool ShowBrowserPane => IsBrowserVisible && SelectedProject is { IsChief: false };
+
+    [RelayCommand]
+    private void ToggleBrowser() => IsBrowserVisible = !IsBrowserVisible;
+
+    partial void OnIsBrowserVisibleChanged(bool value)
+    {
+        _state.ShowBrowser = value;
+        _state.Save();
+    }
 
     // Vibe CLI updates. Checked when an agent first reports its version, then every six hours.
     [ObservableProperty]
@@ -488,7 +505,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     private ProjectViewModel NewProject(ProjectRecord record)
     {
         var connection = new AgentConnection(record.Path, _locateAgent, _startAgent, _openUrl, _dispatch, _clientVersion);
-        var project = new ProjectViewModel(record, connection, NewChanges(record.Path), new ActionsViewModel(record.Path, _dispatch)) { ChangesFactory = NewChanges };
+        var project = new ProjectViewModel(record, connection, NewChanges(record.Path), new ActionsViewModel(record.Path, _dispatch), new BrowserViewModel(_openUrl, record.BrowserUrl)) { ChangesFactory = NewChanges };
         connection.SignedIn += async (_, _) =>
         {
             if (SelectedThread is { } thread && thread.Project == project)
@@ -789,6 +806,20 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         {
             var parent = FindThread(orchestratorId) ?? throw new InvalidOperationException("The orchestrator thread no longer exists.");
             return Task.FromResult<IReadOnlyList<ProjectAction>>(ResolveProject(parent, projectName).Actions.Actions.Where(action => action.Tool).ToList());
+        });
+
+    public Task<object> OpenInBrowserAsync(string orchestratorId, string url, string? projectName)
+        => OnUiAsync(() =>
+        {
+            var parent = FindThread(orchestratorId) ?? throw new InvalidOperationException("The orchestrator thread no longer exists.");
+            var project = ResolveProject(parent, projectName);
+            project.Browser.Navigate(url);
+            if (project.Browser.Error is { } error)
+                throw new InvalidOperationException(error);
+            if (project == SelectedProject)
+                IsBrowserVisible = true;
+            Save();
+            return Task.FromResult<object>(new { opened = project.Browser.Source.ToString(), project = project.Name });
         });
 
     public async Task<IReadOnlyList<SearchHit>> SearchCodeAsync(string orchestratorId, string query, string? projectName, int maxResults, CancellationToken cancellationToken)

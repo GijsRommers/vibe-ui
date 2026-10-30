@@ -10,21 +10,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\VibeUi.Acp\VibeUi.Acp.csproj"/>
+        <ProjectReference Include="..\VibeUi.Acp\VibeUi.Acp.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <AvaloniaResource Include="Assets\**"/>
+        <AvaloniaResource Include="Assets\**" />
         <Content Include="Assets\vibe-ui.png" CopyToOutputDirectory="PreserveNewest" />
         <Content Include="Assets\vibe-ui.icns" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.1.3"/>
-        <PackageReference Include="Avalonia.Desktop" Version="12.1.3"/>
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3"/>
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3"/>
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
+        <PackageReference Include="Avalonia" Version="12.1.3" />
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.1" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>

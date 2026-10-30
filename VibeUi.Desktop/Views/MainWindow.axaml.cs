@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.O, command | KeyModifiers.Shift), Command = new RelayAction(() => _ = AddProjectAsync()) });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.D, command), Command = model.ToggleChangesCommand });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.OemComma, command), Command = model.ToggleSettingsCommand });
+        KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.B, command), Command = model.ToggleBrowserCommand });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.T, command | KeyModifiers.Shift), Command = new RelayAction(() => model.ShowThoughts = !model.ShowThoughts) });
         KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Escape), Command = new RelayAction(() =>
         {

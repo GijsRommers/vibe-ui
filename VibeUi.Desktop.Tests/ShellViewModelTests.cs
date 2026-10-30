@@ -749,3 +749,52 @@ public sealed class WorktreeThreadTests
         Assert.Equal(0, process.ExitCode);
     }
 }
+
+public sealed class BrowserTests
+{
+    [Theory]
+    [InlineData("3000", "http://localhost:3000/")]
+    [InlineData("localhost:5173", "http://localhost:5173/")]
+    [InlineData("127.0.0.1:8080/app", "http://127.0.0.1:8080/app")]
+    [InlineData("example.com/docs", "https://example.com/docs")]
+    [InlineData("https://mistral.ai", "https://mistral.ai/")]
+    public void AddressesAreNormalised(string typed, string expected)
+    {
+        var browser = new BrowserViewModel(_ => { });
+        browser.Navigate(typed);
+        Assert.Equal(expected, browser.Source.ToString());
+        Assert.Null(browser.Error);
+    }
+
+    [Fact]
+    public void BadAddressesAreRefused()
+    {
+        var browser = new BrowserViewModel(_ => { });
+        browser.Navigate("file:///etc/passwd");
+        Assert.NotNull(browser.Error);
+        Assert.Equal(BrowserViewModel.DefaultUrl, browser.Source.ToString());
+    }
+
+    [Fact]
+    public async Task AgentsCanOpenTheBrowserPaneAndTheUrlIsRemembered()
+    {
+        var directory = Directory.CreateTempSubdirectory("vibe-ui-browser").FullName;
+        var workspace = Directory.CreateTempSubdirectory("vibe-ui-browser-project").FullName;
+        var shell = new ShellViewModel(AppState.Load(directory), new ThreadStore(directory),
+            () => "/usr/local/bin/vibe-acp",
+            (_, cwd, handler, _) => new FakeAcpClient { Handler = handler, Workspace = cwd },
+            _ => { }, action => action(), latestVibeVersion: _ => Task.FromResult<string?>(null));
+        await shell.AddProjectAsync(workspace);
+        await shell.NewOrchestratorAsync(shell.SelectedProject);
+        Assert.False(shell.ShowBrowserPane);
+
+        await shell.OpenInBrowserAsync(shell.SelectedThread!.Id, "localhost:4321", null);
+
+        Assert.True(shell.ShowBrowserPane);
+        Assert.Equal("http://localhost:4321/", shell.ActiveBrowser!.Source.ToString());
+        shell.ActiveBrowser.ReportNavigation(new Uri("http://localhost:4321/about"), true, true, false);
+        shell.Save();
+        Assert.Equal("http://localhost:4321/about", AppState.Load(directory).Projects[0].BrowserUrl);
+        await shell.ShutdownAsync();
+    }
+}

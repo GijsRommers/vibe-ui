@@ -31,6 +31,8 @@ public sealed class AppState
 
     public bool ShowChanges { get; set; } = true;
 
+    public bool ShowBrowser { get; set; }
+
     /// <summary>Overrides where vibe-acp is found; empty means PATH and ~/.local/bin.</summary>
     public string? VibeExecutable { get; set; }
 
@@ -57,6 +59,7 @@ public sealed class AppState
                     VibeExecutable = snapshot.VibeExecutable,
                     BriefingMinutes = snapshot.BriefingMinutes ?? 3,
                     DefaultModeId = snapshot.DefaultModeId ?? "smart-approve",
+                    ShowBrowser = snapshot.ShowBrowser ?? false,
                 };
             return Migrate(directory);
         }
@@ -88,7 +91,7 @@ public sealed class AppState
         try
         {
             System.IO.Directory.CreateDirectory(_directory);
-            var snapshot = new Snapshot(Projects, SelectedThreadId, ShowThoughts, ShowChanges, Chief, VibeExecutable, BriefingMinutes, DefaultModeId);
+            var snapshot = new Snapshot(Projects, SelectedThreadId, ShowThoughts, ShowChanges, Chief, VibeExecutable, BriefingMinutes, DefaultModeId, ShowBrowser);
             File.WriteAllText(Path.Combine(_directory, "state.json"), JsonSerializer.Serialize(snapshot, Json));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -97,7 +100,7 @@ public sealed class AppState
     }
 
     private sealed record Snapshot(List<ProjectRecord>? Projects, string? SelectedThreadId, bool ShowThoughts, bool? ShowChanges, ThreadRecord? Chief = null,
-        string? VibeExecutable = null, int? BriefingMinutes = null, string? DefaultModeId = null);
+        string? VibeExecutable = null, int? BriefingMinutes = null, string? DefaultModeId = null, bool? ShowBrowser = null);
 
     private sealed record LegacySettings(string? WorkspacePath, bool ShowThoughts);
 }
@@ -109,6 +112,9 @@ public sealed class ProjectRecord
     public required string Name { get; set; }
     public bool IsExpanded { get; set; } = true;
     public List<ThreadRecord> Threads { get; set; } = [];
+
+    /// <summary>Last address shown in the built-in browser for this project.</summary>
+    public string? BrowserUrl { get; set; }
 
     public static ProjectRecord ForPath(string path)
     {

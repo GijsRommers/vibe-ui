@@ -91,6 +91,7 @@ public static partial class ProjectActions
             try
             {
                 await process.WaitForExitAsync(limit.Token);
+                process.WaitForExit(); // drains the redirected streams, which WaitForExitAsync does not promise
                 return new ActionOutcome(process.ExitCode, Snapshot());
             }
             catch (OperationCanceledException)

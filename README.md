@@ -27,6 +27,9 @@ modes, MCP servers, skills and configuration in `~/.vibe`.
   `runOnWorktreeCreate` set up new task worktrees. Agents get them as `list_actions` and
   `run_action`, plus `list_pull_requests`, `pull_request_checks` and `create_pull_request` through
   `gh`.
+- **Built-in browser** (⌘B): a pane with a native web view (WKWebView on macOS, WebView2 on
+  Windows) for the dev server a thread just started. Agents can point it somewhere with
+  `open_in_browser`. The last address is remembered per project.
 - **Settings** (⌘,): the `vibe-acp` executable, default mode, briefing interval, Vibe updates.
 - **Worktree threads.** "New thread in a worktree" (⌘⌥N) gives a thread its own git worktree and
   `vibe/…` branch, so several threads can edit the same project at once. The Changes pane follows
@@ -44,7 +47,7 @@ modes, MCP servers, skills and configuration in `~/.vibe`.
 - **Sign in** through Mistral AI Studio in your browser, and sign out. Vibe stores the key.
 - **Workspace trust.** An untrusted folder gets a banner with a one-click "Trust this folder".
 - **Shortcuts.** ⌘N new thread, ⌘⇧N new orchestrator, ⌘⇧O add project, ⌘D changes pane,
-  ⌘⌥N worktree thread, ⌘⇧T thoughts, ⌘, settings, Esc stop the current turn. Ctrl on Windows and Linux.
+  ⌘⌥N worktree thread, ⌘B browser, ⌘⇧T thoughts, ⌘, settings, Esc stop the current turn. Ctrl on Windows and Linux.
 
 ## Run it
 

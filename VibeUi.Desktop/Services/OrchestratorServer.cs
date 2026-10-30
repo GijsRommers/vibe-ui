@@ -28,6 +28,9 @@ public interface IOrchestratorHost
 
     Task<IReadOnlyList<ProjectAction>> ListActionsAsync(string orchestratorId, string? project);
 
+    /// <summary>Shows a URL in the project's built-in browser pane.</summary>
+    Task<object> OpenInBrowserAsync(string orchestratorId, string url, string? project);
+
     /// <summary>Ranked, offline code search over a project.</summary>
     Task<IReadOnlyList<SearchHit>> SearchCodeAsync(string orchestratorId, string query, string? project, int maxResults, CancellationToken cancellationToken);
 
@@ -250,6 +253,7 @@ public sealed class OrchestratorServer : IAsyncDisposable
                 "cancel_task" => await _host.CancelAsync(orchestratorId, Required("task_id")) ?? throw new McpError(-32602, "Unknown task_id."),
                 "run_action" => await _host.RunActionAsync(orchestratorId, Required("name"), arguments["project"]?.GetValue<string>(), cancellationToken),
                 "list_actions" => await _host.ListActionsAsync(orchestratorId, arguments["project"]?.GetValue<string>()),
+                "open_in_browser" => await _host.OpenInBrowserAsync(orchestratorId, Required("url"), arguments["project"]?.GetValue<string>()),
                 "search_code" => await _host.SearchCodeAsync(orchestratorId, Required("query"), arguments["project"]?.GetValue<string>(),
                     (int)Math.Clamp(arguments["max_results"]?.GetValue<double>() ?? 10, 1, 30), cancellationToken),
                 "list_pull_requests" => await _host.GitHubAsync(orchestratorId, "list", arguments["project"]?.GetValue<string>(), Strings(arguments), cancellationToken),
@@ -311,6 +315,12 @@ public sealed class OrchestratorServer : IAsyncDisposable
                 ["name"] = Property("string", "The action name from list_actions."),
                 ["project"] = Property("string", "Project name; required for the Chief of Staff."),
             }, ["name"]),
+        Tool("open_in_browser", "Show a web page in Vibe UI's built-in browser pane, for example the dev server you just started (http://localhost:3000). The person sees it next to the chat.",
+            new JsonObject
+            {
+                ["url"] = Property("string", "The address to open."),
+                ["project"] = Property("string", "Project name; required for the Chief of Staff."),
+            }, ["url"]),
         Tool("search_code", "Find the files most relevant to a question or identifiers, ranked by a local index of the project (no network). Returns paths with matching lines. Good first step before delegating: name the files in the task prompt.",
             new JsonObject
             {

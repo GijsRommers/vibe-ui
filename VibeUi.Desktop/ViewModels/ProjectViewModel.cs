@@ -7,15 +7,20 @@ namespace VibeUi.Desktop.ViewModels;
 /// <summary>A folder in the sidebar: its threads, its agent process and its git changes.</summary>
 public sealed partial class ProjectViewModel : ObservableObject
 {
-    public ProjectViewModel(ProjectRecord record, AgentConnection connection, ChangesViewModel changes, ActionsViewModel actions, bool isChief = false)
+    public ProjectViewModel(ProjectRecord record, AgentConnection connection, ChangesViewModel changes, ActionsViewModel actions, BrowserViewModel browser, bool isChief = false)
     {
         Record = record;
         Connection = connection;
         Changes = changes;
         Actions = actions;
+        Browser = browser;
         IsChief = isChief;
         _isExpanded = record.IsExpanded;
+        browser.Navigated += (_, url) => Record.BrowserUrl = url;
     }
+
+    /// <summary>The built-in browser pane for this project (dev servers, docs).</summary>
+    public BrowserViewModel Browser { get; }
 
     /// <summary>The project's vibe.re actions and their output drawer.</summary>
     public ActionsViewModel Actions { get; }
