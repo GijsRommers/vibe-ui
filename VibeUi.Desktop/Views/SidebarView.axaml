@@ -118,6 +118,8 @@
                                                     <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Classes="faint" IsVisible="{Binding HasWorktree}" Text="{Binding Record.Branch}" TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
+                                                <TextBlock Grid.Column="2" Classes="faint" IsVisible="{Binding HasPullRequest}" Text="{Binding PullRequest.Label}" VerticalAlignment="Center"
+                                                           Foreground="{Binding PullRequest.Checks, Converter={x:Static vm:PullRequestChips.Brush}}" ToolTip.Tip="{Binding PullRequest.Summary}" />
                                             </Grid>
                                         </Button>
                                     </DataTemplate>

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using VibeUi.Acp;
 using System.Diagnostics;
 using VibeUi.Desktop.Services;
@@ -299,5 +300,29 @@ public sealed class MarkdownInlinesTests
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         entry.Apply(new VibeUi.Acp.ToolCallUpdate("c", $"Reading {home}/notes.txt"));
         Assert.Equal("Reading ~/notes.txt", entry.DisplayTitle);
+    }
+}
+
+public sealed class PullRequestTests
+{
+    [Fact]
+    public void ChecksAndSummaryComeFromTheRollup()
+    {
+        static JsonElement Check(string json) => JsonSerializer.Deserialize<JsonElement>(json);
+        var passing = new PullRequest(12, "Fix", "OPEN", "https://x/12", "vibe/fix", false, DateTimeOffset.UtcNow, "APPROVED",
+            [Check("""{"status":"COMPLETED","conclusion":"SUCCESS"}"""), Check("""{"state":"SUCCESS"}""")]);
+        Assert.Equal("passing", passing.Checks);
+        Assert.Equal("#12 · checks passing · approved", passing.Summary);
+
+        var failing = passing with { StatusCheckRollup = [Check("""{"status":"COMPLETED","conclusion":"FAILURE"}"""), Check("""{"status":"IN_PROGRESS"}""")], ReviewDecision = null, IsDraft = true };
+        Assert.Equal("failing", failing.Checks);
+        Assert.Equal("#12 · draft · checks failing", failing.Summary);
+
+        var pending = passing with { StatusCheckRollup = [Check("""{"status":"QUEUED"}""")], ReviewDecision = "CHANGES_REQUESTED" };
+        Assert.Equal("pending", pending.Checks);
+        Assert.Contains("changes requested", pending.Summary);
+
+        Assert.Equal("", (passing with { StatusCheckRollup = null }).Checks);
+        Assert.Equal("#12", (passing with { StatusCheckRollup = null, ReviewDecision = null }).Summary);
     }
 }

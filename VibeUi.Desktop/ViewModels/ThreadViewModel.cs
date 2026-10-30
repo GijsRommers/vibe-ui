@@ -147,6 +147,38 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
     public bool IsWorkspaceUntrusted => WorkspaceTrust == "untrusted";
     public bool HasThinkingLevels => ThinkingLevels.Count > 0;
 
+    /// <summary>The open pull request for this thread's branch, from the checkout's Changes pane.</summary>
+    public PullRequest? PullRequest => _changes?.CurrentPullRequest;
+    public bool HasPullRequest => PullRequest is not null;
+    private ChangesViewModel? _changes;
+
+    /// <summary>Follows a Changes pane so the thread can show its branch's pull request.</summary>
+    public void TrackChanges(ChangesViewModel changes)
+    {
+        if (_changes is not null)
+            _changes.PropertyChanged -= OnChangesChanged;
+        _changes = changes;
+        changes.PropertyChanged += OnChangesChanged;
+    }
+
+    private void OnChangesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName is nameof(ChangesViewModel.CurrentPullRequest) or null)
+        {
+            OnPropertyChanged(nameof(PullRequest));
+            OnPropertyChanged(nameof(HasPullRequest));
+        }
+    }
+
+    [RelayCommand]
+    private void OpenPullRequest()
+    {
+        if (PullRequest is { } pull)
+            OpenUrlRequested?.Invoke(this, pull.Url);
+    }
+
+    public event EventHandler<string>? OpenUrlRequested;
+
     /// <summary>Second sidebar line: only while something is happening.</summary>
     public string SidebarSubtitle => NeedsAttention ? "Waiting for your answer" : IsWorking ? "Working…" : State == ThreadStatus.Failed ? "Failed" : "";
     public bool HasSidebarSubtitle => SidebarSubtitle.Length > 0;

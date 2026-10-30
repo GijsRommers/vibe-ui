@@ -274,6 +274,27 @@
         <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
     </Style>
 
+    <!-- Pull request chip -->
+    <Style Selector="Button.chip">
+        <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+        <Setter Property="CornerRadius" Value="999" />
+        <Setter Property="Padding" Value="8,2" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Button.chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="Button.chip.passing">
+        <Setter Property="Foreground" Value="{StaticResource GreenBrush}" />
+    </Style>
+    <Style Selector="Button.chip.failing">
+        <Setter Property="Foreground" Value="{StaticResource RedBrush}" />
+    </Style>
+
     <!-- Cards -->
     <Style Selector="Border.card">
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />

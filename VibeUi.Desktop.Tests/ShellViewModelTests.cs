@@ -793,10 +793,19 @@ public sealed class BrowserTests
 
         Assert.True(shell.ShowBrowserPane);
         Assert.False(shell.ShowChangesPane); // one right-hand pane at a time
+
         Assert.Equal("http://localhost:4321/", shell.ActiveBrowser!.Source.ToString());
         shell.ActiveBrowser.ReportNavigation(new Uri("http://localhost:4321/about"), true, true, false);
         shell.Save();
         Assert.Equal("http://localhost:4321/about", AppState.Load(directory).Projects[0].BrowserUrl);
+        // From the chief, the pane shows the project the tool targeted.
+        var projectName = shell.Projects[0].Name;
+        await shell.SelectThreadAsync(shell.Chief);
+        shell.IsBrowserVisible = false;
+        await shell.OpenInBrowserAsync(ShellViewModel.ChiefId, "localhost:9999", projectName);
+        Assert.True(shell.ShowBrowserPane);
+        Assert.Equal("http://localhost:9999/", shell.ActiveBrowser!.Source.ToString());
+
         await shell.ShutdownAsync();
     }
 }

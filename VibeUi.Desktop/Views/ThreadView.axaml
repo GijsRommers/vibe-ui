@@ -25,6 +25,14 @@
                                 <TextBlock Text="{Binding Record.Branch}" />
                             </StackPanel>
                         </Border>
+                        <Button Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasPullRequest}" Command="{Binding OpenPullRequestCommand}"
+                                ToolTip.Tip="{Binding PullRequest.Title}" Classes.failing="{Binding PullRequest.Checks, Converter={x:Static vm:PullRequestChips.IsFailing}}"
+                                Classes.passing="{Binding PullRequest.Checks, Converter={x:Static vm:PullRequestChips.IsPassing}}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="⇅" FontSize="11" />
+                                <TextBlock Text="{Binding PullRequest.Summary}" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsChief}">
                         <ItemsControl ItemsSource="{Binding Project.Actions.Actions}" VerticalAlignment="Center" Margin="-6,0,6,0">
@@ -54,7 +62,7 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <ToggleButton Classes="ghost" Content="Thoughts" FontSize="12" ToolTip.Tip="Show the model's reasoning (⌘⇧T)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowThoughts}" />
-                    <ToggleButton Classes="ghost" Content="Web" FontSize="12" ToolTip.Tip="Built-in browser (⌘B)" IsVisible="{Binding !IsChief}"
+                    <ToggleButton Classes="ghost" Content="Web" FontSize="12" ToolTip.Tip="Built-in browser (⌘B)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsBrowserVisible}" />
                     <ToggleButton Classes="ghost" Content="Diff" FontSize="12" ToolTip.Tip="Git changes and pull requests (⌘D)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).IsChangesVisible}" />

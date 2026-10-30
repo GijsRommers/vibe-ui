@@ -174,14 +174,17 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     [NotifyPropertyChangedFor(nameof(ShowBrowserPane))]
     private bool _isBrowserVisible;
 
-    public BrowserViewModel? ActiveBrowser => SelectedProject?.Browser;
+    private ProjectViewModel? _browserProject;
+
+    /// <summary>The browser of the selected project, or (on the chief) of the project an agent last opened a page in.</summary>
+    public BrowserViewModel? ActiveBrowser => (SelectedProject is { IsChief: false } ? SelectedProject : _browserProject ?? Projects.FirstOrDefault())?.Browser;
+    public bool ShowBrowserPane => IsBrowserVisible && ActiveBrowser is not null;
 
     /// <summary>Browser takes most of the window; the chat shrinks to its minimum.</summary>
     [ObservableProperty] private bool _isBrowserWide;
 
     [RelayCommand]
     private void ToggleBrowserWide() => IsBrowserWide = !IsBrowserWide;
-    public bool ShowBrowserPane => IsBrowserVisible && SelectedProject is { IsChief: false };
 
     [RelayCommand]
     private void ToggleBrowser() => IsBrowserVisible = !IsBrowserVisible;
@@ -569,6 +572,9 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
 
     private void Attach(ProjectViewModel project, ThreadViewModel thread)
     {
+        if (!project.IsChief)
+            thread.TrackChanges(project.ChangesFor(thread.WorkspacePath));
+        thread.OpenUrlRequested += (_, url) => _openUrl(url);
         if (thread.ParentId is { } parentId && project.Threads.Select((candidate, index) => (candidate, index)).LastOrDefault(pair => pair.candidate.Id == parentId || pair.candidate.ParentId == parentId) is { candidate: not null } anchor)
             project.Threads.Insert(anchor.index + 1, thread);
         else
@@ -827,10 +833,12 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
             project.Browser.Navigate(url);
             if (project.Browser.Error is { } error)
                 throw new InvalidOperationException(error);
-            if (project == SelectedProject)
-                IsBrowserVisible = true;
+            _browserProject = project;
+            OnPropertyChanged(nameof(ActiveBrowser));
+            IsBrowserVisible = true;
+            OnPropertyChanged(nameof(ShowBrowserPane));
             Save();
-            return Task.FromResult<object>(new { opened = project.Browser.Source.ToString(), project = project.Name });
+            return Task.FromResult<object>(new { opened = project.Browser.Source.ToString(), project = project.Name, shown = true });
         });
 
     public async Task<IReadOnlyList<SearchHit>> SearchCodeAsync(string orchestratorId, string query, string? projectName, int maxResults, CancellationToken cancellationToken)

@@ -3,9 +3,56 @@ using System.Text.Json.Serialization;
 
 namespace VibeUi.Desktop.Services;
 
-public sealed record PullRequest(int Number, string Title, string State, string Url, string HeadRefName, bool IsDraft, DateTimeOffset UpdatedAt)
+public sealed record PullRequest(
+    int Number,
+    string Title,
+    string State,
+    string Url,
+    string HeadRefName,
+    bool IsDraft,
+    DateTimeOffset UpdatedAt,
+    string? ReviewDecision = null,
+    List<JsonElement>? StatusCheckRollup = null)
 {
     public string Label => IsDraft ? $"#{Number} · draft" : $"#{Number}";
+
+    /// <summary>passing, failing, pending, or empty when the branch has no checks.</summary>
+    public string Checks
+    {
+        get
+        {
+            if (StatusCheckRollup is not { Count: > 0 } checks)
+                return "";
+            var states = checks.Select(check =>
+            {
+                var conclusion = check.TryGetProperty("conclusion", out var c) ? c.GetString() : null;
+                var status = check.TryGetProperty("status", out var st) ? st.GetString() : null;
+                var state = check.TryGetProperty("state", out var se) ? se.GetString() : null;
+                return (conclusion ?? state ?? status ?? "").ToUpperInvariant();
+            }).ToList();
+            if (states.Any(state => state is "FAILURE" or "ERROR" or "TIMED_OUT" or "CANCELLED" or "ACTION_REQUIRED" or "STARTUP_FAILURE"))
+                return "failing";
+            if (states.Any(state => state is "PENDING" or "IN_PROGRESS" or "QUEUED" or "WAITING" or "REQUESTED" or ""))
+                return "pending";
+            return "passing";
+        }
+    }
+
+    /// <summary>One line for chips: "#12 · draft · checks passing · approved".</summary>
+    public string Summary
+    {
+        get
+        {
+            var parts = new List<string> { Label };
+            if (Checks.Length > 0)
+                parts.Add("checks " + Checks);
+            if (ReviewDecision is "APPROVED")
+                parts.Add("approved");
+            else if (ReviewDecision is "CHANGES_REQUESTED")
+                parts.Add("changes requested");
+            return string.Join(" · ", parts);
+        }
+    }
 }
 
 public sealed record ActionResult(bool Ok, string Message)
@@ -62,7 +109,7 @@ public static class GitActions
 
     public static async Task<(IReadOnlyList<PullRequest> Pulls, string? Error)> ListPullRequestsAsync(string directory, CancellationToken cancellationToken = default)
     {
-        var result = await RunGhAsync(directory, ["pr", "list", "--state", "open", "--limit", "20", "--json", "number,title,state,url,headRefName,isDraft,updatedAt"], cancellationToken);
+        var result = await RunGhAsync(directory, ["pr", "list", "--state", "open", "--limit", "20", "--json", "number,title,state,url,headRefName,isDraft,updatedAt,reviewDecision,statusCheckRollup"], cancellationToken);
         if (result.ExitCode != 0)
             return ([], FirstLine(result.Error ?? result.Output, "gh pr list failed."));
         try
