@@ -64,7 +64,7 @@
                     <StackPanel Spacing="6">
                         <TextBox Name="PromptBox" Classes="plain" Text="{Binding PromptText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" MaxHeight="220"
                                  PlaceholderText="{Binding Kind, Converter={x:Static vm:ComposerText.Placeholder}}"
-                                 KeyDown="PromptKeyDown" AutomationProperties.Name="Prompt" />
+                                 AutomationProperties.Name="Prompt" />
                         <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="6">
                             <ComboBox Name="ModeBox" Classes="pill" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding HasSession}"
                                       PlaceholderText="Mode" AutomationProperties.Name="Session mode">

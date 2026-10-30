@@ -13,6 +13,8 @@ public partial class ThreadView : UserControl
     public ThreadView()
     {
         InitializeComponent();
+        // Tunnel so we see Enter before the multi-line TextBox swallows it as a newline.
+        PromptBox.AddHandler(KeyDownEvent, PromptKeyDown, RoutingStrategies.Tunnel);
         DataContextChanged += (_, _) =>
         {
             if (_thread is not null)
