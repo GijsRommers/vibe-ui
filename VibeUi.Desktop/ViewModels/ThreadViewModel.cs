@@ -73,6 +73,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
     public bool IsChief => Kind == ThreadKind.Chief;
     public bool IsTask => Kind == ThreadKind.Task;
     public bool IsChiefTask => IsTask && ParentId == ShellViewModel.ChiefId;
+    public bool ShowKindBadge => Kind is ThreadKind.Chat or ThreadKind.Orchestrator;
     public string? ParentId => Record.ParentId;
     public string WorkspacePath => Record.WorktreePath ?? Project.Path;
     public bool HasWorktree => Record.WorktreePath is not null;
