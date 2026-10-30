@@ -1,3 +1,4 @@
+using VibeUi.Acp;
 using System.Diagnostics;
 using VibeUi.Desktop.Services;
 using VibeUi.Desktop.ViewModels;
@@ -192,5 +193,26 @@ public sealed class GitActionsTests
         using var process = System.Diagnostics.Process.Start(startInfo)!;
         process.WaitForExit();
         Assert.Equal(0, process.ExitCode);
+    }
+}
+
+public sealed class VibeUpdaterTests
+{
+    [Theory]
+    [InlineData("2.25.0", "3.0.4", true)]
+    [InlineData("3.0.4", "3.0.4", false)]
+    [InlineData("3.1.0", "3.0.4", false)]
+    [InlineData("2.25.0", "2.25.1rc1", true)]
+    [InlineData(null, "3.0.4", false)]
+    [InlineData("2.25.0", "", false)]
+    public void IsNewerComparesReleases(string? installed, string latest, bool expected) => Assert.Equal(expected, VibeUpdater.IsNewer(installed, latest));
+
+    [Fact]
+    public void PlanPrefersUvWhenUvInstalledVibe()
+    {
+        var home = Directory.CreateTempSubdirectory("vibe-ui-home").FullName;
+        var plan = VibeUpdater.Plan(home);
+        Assert.SkipWhen(OperatingSystem.IsWindows(), "The script fallback is for macOS and Linux.");
+        Assert.Equal(VibeAcpLauncher.InstallCommand, plan!.Description); // no uv receipt under this home: install script
     }
 }

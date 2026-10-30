@@ -82,6 +82,9 @@ public sealed partial class AgentConnection : ObservableObject, IAcpClientHandle
     [ObservableProperty] private string _status = "Not connected.";
     [ObservableProperty] private string _agentDescription = "Mistral Vibe";
 
+    /// <summary>The version the agent announced in <c>initialize</c>, once connected.</summary>
+    [ObservableProperty] private string? _agentVersion;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSignInUrl))]
     private string? _signInUrl;
@@ -137,6 +140,7 @@ public sealed partial class AgentConnection : ObservableObject, IAcpClientHandle
                 _capabilities = initialized.AgentCapabilities ?? new AgentCapabilities();
                 var info = initialized.AgentInfo;
                 AgentDescription = info is null ? "Agent" : $"{info.Title ?? info.Name} {info.Version}".Trim();
+                AgentVersion = info?.Version;
                 State = ConnectionState.Ready;
                 Status = $"{AgentDescription} is ready.";
                 return true;

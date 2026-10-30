@@ -42,6 +42,8 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     private readonly Dictionary<string, string> _pendingBriefs = new();
     private OrchestratorServer? _server;
     private CancellationTokenSource? _briefingTimer;
+    private readonly Func<CancellationToken, Task<string?>> _latestVibeVersion;
+    private DateTimeOffset _lastUpdateCheck = DateTimeOffset.MinValue;
 
     public ShellViewModel(
         AppState state,
@@ -51,8 +53,10 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         Action<string> openUrl,
         Action<Action> dispatch,
         string clientVersion = "0.0.0",
-        Func<IOrchestratorHost, OrchestratorServer>? serverFactory = null)
+        Func<IOrchestratorHost, OrchestratorServer>? serverFactory = null,
+        Func<CancellationToken, Task<string?>>? latestVibeVersion = null)
     {
+        _latestVibeVersion = latestVibeVersion ?? VibeUpdater.LatestVersionAsync;
         _state = state;
         _store = store;
         _locateAgent = locateAgent;
@@ -162,6 +166,71 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
 
     [ObservableProperty] private bool _isSettingsVisible;
 
+    // Vibe CLI updates. Checked when an agent first reports its version, then every six hours.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVibeUpdate))]
+    private string? _availableVibeVersion;
+
+    [ObservableProperty] private string _installedVibeVersion = "";
+    [ObservableProperty] private bool _isUpdatingVibe;
+    [ObservableProperty] private string _vibeUpdateStatus = "";
+
+    public bool HasVibeUpdate => AvailableVibeVersion is not null && !IsUpdatingVibe;
+    public string UpgradeDescription => VibeUpdater.Plan()?.Description ?? "No upgrade method found; reinstall Vibe by hand.";
+
+    [RelayCommand]
+    public async Task CheckForVibeUpdateAsync()
+    {
+        var installed = Projects.Select(project => project.Connection).Append(Chief.Project.Connection)
+            .Select(connection => connection.AgentVersion).FirstOrDefault(version => version is not null);
+        if (installed is null)
+            return;
+        InstalledVibeVersion = installed;
+        _lastUpdateCheck = DateTimeOffset.UtcNow;
+        var latest = await _latestVibeVersion(CancellationToken.None);
+        AvailableVibeVersion = VibeUpdater.IsNewer(installed, latest) ? latest : null;
+        VibeUpdateStatus = AvailableVibeVersion is { } newer ? $"Mistral Vibe {newer} is available (installed {installed})." : $"Mistral Vibe {installed} is up to date.";
+    }
+
+    private void MaybeCheckForVibeUpdate()
+    {
+        if (DateTimeOffset.UtcNow - _lastUpdateCheck > TimeSpan.FromHours(6))
+            _ = CheckForVibeUpdateAsync();
+    }
+
+    /// <summary>Upgrades the CLI, then restarts every agent so the new version is in use.</summary>
+    [RelayCommand]
+    public async Task UpdateVibeAsync()
+    {
+        if (IsUpdatingVibe || VibeUpdater.Plan() is not { } plan)
+            return;
+        IsUpdatingVibe = true;
+        OnPropertyChanged(nameof(HasVibeUpdate));
+        VibeUpdateStatus = $"Running {plan.Description}…";
+        try
+        {
+            var failure = await Task.Run(() => VibeUpdater.UpgradeAsync(plan, line => _dispatch(() => VibeUpdateStatus = line.Length > 120 ? line[..120] : line)));
+            if (failure is not null)
+            {
+                VibeUpdateStatus = $"Update failed: {failure}";
+                return;
+            }
+            VibeUpdateStatus = "Updated. Restarting Vibe…";
+            foreach (var connection in Projects.Select(project => project.Connection).Append(Chief.Project.Connection))
+                await connection.DisposeAsync();
+            AvailableVibeVersion = null;
+            if (SelectedThread is { } thread)
+                await OpenAsync(thread);
+            _lastUpdateCheck = DateTimeOffset.MinValue;
+            await CheckForVibeUpdateAsync();
+        }
+        finally
+        {
+            IsUpdatingVibe = false;
+            OnPropertyChanged(nameof(HasVibeUpdate));
+        }
+    }
+
     /// <summary>Settings. Saved on every change; the executable applies to agents started afterwards.</summary>
     [ObservableProperty] private string _vibeExecutable = "";
     [ObservableProperty] private int _briefingMinutes = 3;
@@ -220,6 +289,8 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     {
         if (args.PropertyName is not (nameof(AgentConnection.State) or null))
             return;
+        if (sender is AgentConnection { State: ConnectionState.Ready })
+            MaybeCheckForVibeUpdate();
         OnPropertyChanged(nameof(ShowGate));
         OnPropertyChanged(nameof(ShowProgress));
         OnPropertyChanged(nameof(ShowInstall));

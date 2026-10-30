@@ -97,6 +97,17 @@
                         <TextBlock Text="{Binding ResolvedExecutable, StringFormat='Using: {0}'}" Classes="faint" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                     <StackPanel Spacing="6">
+                        <TextBlock Text="Mistral Vibe" Classes="section" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBlock Text="{Binding VibeUpdateStatus}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                <Button Content="Check" Classes="outline" Command="{Binding CheckForVibeUpdateCommand}" Padding="10,4" />
+                                <Button Content="Update" Classes="primary" Command="{Binding UpdateVibeCommand}" Padding="10,4" IsVisible="{Binding HasVibeUpdate}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding UpgradeDescription, StringFormat='Upgrades run: {0}'}" Classes="faint" />
+                    </StackPanel>
+                    <StackPanel Spacing="6">
                         <TextBlock Text="Briefing interval (minutes)" Classes="section" />
                         <NumericUpDown Value="{Binding BriefingMinutes}" Minimum="1" Maximum="120" Increment="1" FormatString="0" Width="140" HorizontalAlignment="Left" AutomationProperties.Name="Briefing minutes" />
                         <TextBlock Text="How often a running Chief of Staff task reports back." Classes="faint" />

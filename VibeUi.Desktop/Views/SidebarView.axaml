@@ -27,19 +27,29 @@
                         <MenuItem Header="Start over" Command="{Binding ResetChiefCommand}" />
                     </MenuFlyout>
                 </Button.ContextFlyout>
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" DataContext="{Binding Chief}" x:DataType="vm:ThreadViewModel">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" DataContext="{Binding Chief}" x:DataType="vm:ThreadViewModel">
                     <Ellipse Classes="dot" Classes.working="{Binding IsWorking}" Classes.attention="{Binding NeedsAttention}" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1">
                         <TextBlock Text="Chief of Staff" FontSize="13" FontWeight="SemiBold" />
                         <TextBlock Text="{Binding Status}" Classes="faint" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                    <TextBlock Grid.Column="2" Text="⟡" Foreground="{StaticResource AccentBrush}" FontSize="13" VerticalAlignment="Center" />
                 </Grid>
             </Button>
         </Border>
 
-        <!-- Footer: agent state -->
+        <!-- Footer: agent state and CLI updates -->
         <Border DockPanel.Dock="Bottom" Padding="14,10" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+            <StackPanel Spacing="8">
+            <Border Name="UpdateCard" IsVisible="{Binding HasVibeUpdate}" Background="{StaticResource AccentSoftBrush}" CornerRadius="8" Padding="10,8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <StackPanel>
+                        <TextBlock Text="Vibe update" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding AvailableVibeVersion, StringFormat='Version {0}'}" Classes="faint" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Update" Classes="primary" Padding="10,4" FontSize="12" Command="{Binding UpdateVibeCommand}" />
+                </Grid>
+            </Border>
+            <TextBlock Text="{Binding VibeUpdateStatus}" Classes="faint" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding VibeUpdateStatus}" IsVisible="{Binding IsUpdatingVibe}" />
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" DataContext="{Binding ActiveConnection}" x:DataType="vm:AgentConnection">
                 <Ellipse Classes="dot" Classes.ready="{Binding IsReady}" Classes.attention="{Binding NeedsSignIn}" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1">
@@ -50,6 +60,7 @@
                     <Button.Flyout>
                         <MenuFlyout Placement="TopEdgeAlignedRight">
                             <MenuItem Header="Settings" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).ToggleSettingsCommand}" />
+                            <MenuItem Header="Check for Vibe updates" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).CheckForVibeUpdateCommand}" />
                             <Separator />
                             <MenuItem Header="Sign out" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).SignOutCommand}" />
                             <MenuItem Header="Reconnect" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).ReconnectCommand}" />
@@ -57,6 +68,7 @@
                     </Button.Flyout>
                 </Button>
             </Grid>
+            </StackPanel>
         </Border>
 
         <!-- Projects and threads -->
@@ -105,10 +117,6 @@
                                                     <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Classes="faint" IsVisible="{Binding HasWorktree}" Text="{Binding Record.Branch}" TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
-                                                <TextBlock Grid.Column="2" Text="⟡" Foreground="{StaticResource AccentBrush}" FontSize="12" VerticalAlignment="Center"
-                                                           IsVisible="{Binding IsOrchestrator}" ToolTip.Tip="Orchestrator" />
-                                                <TextBlock Grid.Column="2" Text="⟡" Foreground="{StaticResource FaintBrush}" FontSize="12" VerticalAlignment="Center"
-                                                           IsVisible="{Binding IsChiefTask}" ToolTip.Tip="Started by the Chief of Staff" />
                                             </Grid>
                                         </Button>
                                     </DataTemplate>

@@ -619,3 +619,33 @@ public sealed class SettingsTests
         Assert.Equal("/opt/vibe/bin/vibe-acp", reloaded.VibeExecutable);
     }
 }
+
+public sealed class VibeUpdateTests
+{
+    [Fact]
+    public async Task ReadyAgentTriggersAnUpdateCheckAndOffersTheNewerVersion()
+    {
+        var directory = Directory.CreateTempSubdirectory("vibe-ui-update").FullName;
+        var checks = 0;
+        var shell = new ShellViewModel(AppState.Load(directory), new ThreadStore(directory),
+            () => "/usr/local/bin/vibe-acp",
+            (_, cwd, handler, _) => new FakeAcpClient { Handler = handler, Workspace = cwd },
+            _ => { },
+            action => action(),
+            latestVibeVersion: _ =>
+            {
+                checks++;
+                return Task.FromResult<string?>("3.0.4");
+            });
+
+        await shell.InitializeAsync();
+        await Task.Yield();
+
+        Assert.Equal(1, checks);
+        Assert.Equal("2.25.0", shell.InstalledVibeVersion);
+        Assert.Equal("3.0.4", shell.AvailableVibeVersion);
+        Assert.True(shell.HasVibeUpdate);
+        Assert.Contains("3.0.4 is available", shell.VibeUpdateStatus);
+        await shell.ShutdownAsync();
+    }
+}
