@@ -253,3 +253,27 @@ public sealed class ProjectActionsTests
         Assert.False(failing.Ok);
     }
 }
+
+public sealed class CodeSearchTests
+{
+    [Fact]
+    public async Task SearchRanksFilesByIdentifierTokens()
+    {
+        var root = Directory.CreateTempSubdirectory("vibe-ui-search").FullName;
+        Directory.CreateDirectory(Path.Combine(root, "src"));
+        Directory.CreateDirectory(Path.Combine(root, "node_modules", "junk"));
+        File.WriteAllText(Path.Combine(root, "src", "TrustService.cs"), "class TrustService {\n  void DecideWorkspaceTrust(string cwd) { }\n  void ApplyConfigOptions() { }\n}\n");
+        File.WriteAllText(Path.Combine(root, "src", "Other.cs"), "class Other { void Nothing() { } }\n");
+        File.WriteAllText(Path.Combine(root, "node_modules", "junk", "trust.js"), "workspace trust decision everywhere trust trust");
+        File.WriteAllBytes(Path.Combine(root, "src", "blob.bin"), [0, 1, 2, 0, 0]);
+
+        var hits = await CodeSearch.SearchAsync(root, "workspace trust decision");
+
+        var top = Assert.Single(hits);
+        Assert.Equal("src/TrustService.cs", top.Path);
+        Assert.Contains(top.Lines, line => line.Number == 2 && line.Text.Contains("DecideWorkspaceTrust"));
+        Assert.Equal(["applyconfigoptions", "apply", "config", "options"], CodeSearch.Tokenize("ApplyConfigOptions"));
+        Assert.Equal(["snake_case", "snake", "case"], CodeSearch.Tokenize("snake_case"));
+        CodeSearch.Forget(root);
+    }
+}

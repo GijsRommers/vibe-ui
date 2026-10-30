@@ -28,7 +28,8 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
         "for one self-contained task (worktree=true gives it its own git worktree and branch), wait_for_task collects a result, check_task and " +
         "list_tasks report status, send_to_task continues a task's thread, cancel_task stops one. Children do not see this conversation. " +
         "Plan the work, split it into independent tasks, delegate them in parallel, wait for them, review what came back and summarise the outcome. " +
-        "list_actions/run_action run the project's declared build and test commands; list_pull_requests, pull_request_checks and create_pull_request talk to GitHub. " +
+        "search_code finds the relevant files before you delegate; list_actions/run_action run the project's declared build and test commands; " +
+        "list_pull_requests, pull_request_checks and create_pull_request talk to GitHub. delegate_task takes a model id, so give routine tasks a cheaper model and hard ones a stronger one. " +
         "Do the small glue work yourself.";
 
     private readonly AppState _state;
@@ -755,6 +756,16 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
             var parent = FindThread(orchestratorId) ?? throw new InvalidOperationException("The orchestrator thread no longer exists.");
             return Task.FromResult<IReadOnlyList<ProjectAction>>(ResolveProject(parent, projectName).Actions.Actions.Where(action => action.Tool).ToList());
         });
+
+    public async Task<IReadOnlyList<SearchHit>> SearchCodeAsync(string orchestratorId, string query, string? projectName, int maxResults, CancellationToken cancellationToken)
+    {
+        var root = await OnUiAsync(() =>
+        {
+            var parent = FindThread(orchestratorId) ?? throw new InvalidOperationException("The orchestrator thread no longer exists.");
+            return Task.FromResult(parent.IsTask ? parent.WorkspacePath : ResolveProject(parent, projectName).Path);
+        });
+        return await CodeSearch.SearchAsync(root, query, maxResults, cancellationToken);
+    }
 
     public async Task<object> GitHubAsync(string orchestratorId, string operation, string? projectName, IReadOnlyDictionary<string, string?> arguments, CancellationToken cancellationToken)
     {

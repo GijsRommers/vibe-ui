@@ -28,6 +28,9 @@ public interface IOrchestratorHost
 
     Task<IReadOnlyList<ProjectAction>> ListActionsAsync(string orchestratorId, string? project);
 
+    /// <summary>Ranked, offline code search over a project.</summary>
+    Task<IReadOnlyList<SearchHit>> SearchCodeAsync(string orchestratorId, string query, string? project, int maxResults, CancellationToken cancellationToken);
+
     /// <summary>GitHub, through gh: open pull requests, the checks of one, or a new one for the current branch.</summary>
     Task<object> GitHubAsync(string orchestratorId, string operation, string? project, IReadOnlyDictionary<string, string?> arguments, CancellationToken cancellationToken);
 }
@@ -247,6 +250,8 @@ public sealed class OrchestratorServer : IAsyncDisposable
                 "cancel_task" => await _host.CancelAsync(orchestratorId, Required("task_id")) ?? throw new McpError(-32602, "Unknown task_id."),
                 "run_action" => await _host.RunActionAsync(orchestratorId, Required("name"), arguments["project"]?.GetValue<string>(), cancellationToken),
                 "list_actions" => await _host.ListActionsAsync(orchestratorId, arguments["project"]?.GetValue<string>()),
+                "search_code" => await _host.SearchCodeAsync(orchestratorId, Required("query"), arguments["project"]?.GetValue<string>(),
+                    (int)Math.Clamp(arguments["max_results"]?.GetValue<double>() ?? 10, 1, 30), cancellationToken),
                 "list_pull_requests" => await _host.GitHubAsync(orchestratorId, "list", arguments["project"]?.GetValue<string>(), Strings(arguments), cancellationToken),
                 "pull_request_checks" => await _host.GitHubAsync(orchestratorId, "checks", arguments["project"]?.GetValue<string>(), Strings(arguments), cancellationToken),
                 "create_pull_request" => await _host.GitHubAsync(orchestratorId, "create", arguments["project"]?.GetValue<string>(), Strings(arguments), cancellationToken),
@@ -306,6 +311,13 @@ public sealed class OrchestratorServer : IAsyncDisposable
                 ["name"] = Property("string", "The action name from list_actions."),
                 ["project"] = Property("string", "Project name; required for the Chief of Staff."),
             }, ["name"]),
+        Tool("search_code", "Find the files most relevant to a question or identifiers, ranked by a local index of the project (no network). Returns paths with matching lines. Good first step before delegating: name the files in the task prompt.",
+            new JsonObject
+            {
+                ["query"] = Property("string", "Words or identifiers to look for, e.g. 'session trust decision' or 'ApplyConfigOptions'."),
+                ["max_results"] = Property("number", "How many files to return. Default 10."),
+                ["project"] = Property("string", "Project name; required for the Chief of Staff."),
+            }, ["query"]),
         Tool("list_pull_requests", "Open pull requests of the project's GitHub repository.",
             new JsonObject { ["project"] = Property("string", "Project name; required for the Chief of Staff.") }, []),
         Tool("pull_request_checks", "CI check results and review state of a pull request.",
