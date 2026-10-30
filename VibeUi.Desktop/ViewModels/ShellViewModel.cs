@@ -78,10 +78,10 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
             ? Chief
             : Projects.SelectMany(project => project.Threads).FirstOrDefault(thread => thread.Id == state.SelectedThreadId)
               ?? Projects.SelectMany(project => project.Threads).OrderByDescending(thread => thread.UpdatedAt).FirstOrDefault();
-        SelectedProject = selected?.Project ?? Projects.FirstOrDefault();
+        selected ??= Chief;
+        SelectedProject = selected.Project;
         SelectedThread = selected;
-        if (selected is not null)
-            selected.IsSelected = true;
+        selected.IsSelected = true;
         if (Projects.SelectMany(project => project.Threads).Any(thread => thread.IsChiefTask))
             StartBriefingTimer();
     }
@@ -151,7 +151,7 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveConnection), nameof(ActiveChanges), nameof(HasProjects), nameof(ShowEmptyState), nameof(ShowChangesPane),
-        nameof(ShowInstall), nameof(ShowSignIn), nameof(ShowConnect), nameof(ShowThread), nameof(ShowNoThread))]
+        nameof(ShowGate), nameof(ShowProgress), nameof(ShowInstall), nameof(ShowSignIn), nameof(ShowConnect), nameof(ShowThread), nameof(ShowNoThread))]
     private ProjectViewModel? _selectedProject;
 
     [ObservableProperty] private bool _showThoughts;
@@ -198,12 +198,14 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     public ChangesViewModel? ActiveChanges => SelectedProject?.Changes;
 
     // Which centre panel is up. The connection's state wins over the thread while Vibe is missing, signed out or down.
-    // The chief is always selectable, so these do not require a project.
+    // Until the active agent is ready, a full-window gate (logo, progress, sign-in) covers everything.
+    public bool ShowGate => ActiveConnection is not { State: ConnectionState.Ready };
+    public bool ShowProgress => ActiveConnection is { State: ConnectionState.Starting or ConnectionState.SigningIn };
     public bool ShowInstall => ActiveConnection is { State: ConnectionState.NotInstalled };
     public bool ShowSignIn => ActiveConnection is { NeedsSignIn: true };
-    public bool ShowConnect => HasSelection && ActiveConnection is { State: ConnectionState.Failed or ConnectionState.Disconnected };
-    public bool ShowThread => HasSelection && !ShowInstall && !ShowSignIn && !ShowConnect;
-    public bool ShowNoThread => HasProjects && !HasSelection && !ShowInstall && !ShowSignIn;
+    public bool ShowConnect => ActiveConnection is { State: ConnectionState.Failed or ConnectionState.Disconnected };
+    public bool ShowThread => HasSelection && !ShowGate;
+    public bool ShowNoThread => HasProjects && !HasSelection && !ShowGate;
     public bool ShowChangesPane => IsChangesVisible && SelectedProject is { IsChief: false };
 
     partial void OnSelectedProjectChanged(ProjectViewModel? oldValue, ProjectViewModel? newValue)
@@ -218,6 +220,8 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     {
         if (args.PropertyName is not (nameof(AgentConnection.State) or null))
             return;
+        OnPropertyChanged(nameof(ShowGate));
+        OnPropertyChanged(nameof(ShowProgress));
         OnPropertyChanged(nameof(ShowInstall));
         OnPropertyChanged(nameof(ShowSignIn));
         OnPropertyChanged(nameof(ShowConnect));
@@ -299,7 +303,10 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     public async Task SelectThreadAsync(ThreadViewModel thread)
     {
         if (SelectedThread == thread)
+        {
+            await OpenAsync(thread);
             return;
+        }
         if (SelectedThread is { } previous)
             previous.IsSelected = false;
         SelectedProject = thread.Project;

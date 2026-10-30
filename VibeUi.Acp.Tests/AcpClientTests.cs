@@ -105,8 +105,13 @@ public sealed class AcpClientTests
         Assert.Equal(StopReasons.EndTurn, response.StopReason);
         Assert.Equal("allow_once", permissionAnswer!.Value.GetProperty("outcome").GetProperty("optionId").GetString());
         Assert.Equal("t1", Assert.Single(handler.PermissionRequests).ToolCall.ToolCallId);
-        // The prompt response is sent after the last update, so every update has been delivered by now.
-        var updates = handler.Updates.Select(entry => entry.Update).ToList();
+        // Notifications are dispatched independently of the response, so the last ones may still be in flight.
+        var deadline = DateTime.UtcNow + Timeout;
+        while (handler.Updates.Count < 7 && DateTime.UtcNow < deadline)
+            await Task.Delay(5);
+        List<SessionUpdate> updates;
+        lock (handler.Updates)
+            updates = handler.Updates.Select(entry => entry.Update).ToList();
         Assert.Equal(["user_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update", "agent_message_chunk", "usage_update", "something_new"],
             updates.Select(update => update.Kind));
         var toolUpdate = Assert.IsType<ToolCallSessionUpdate>(updates[3]);

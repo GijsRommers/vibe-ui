@@ -45,7 +45,8 @@ public sealed class ShellViewModelTests
     {
         var harness = new Harness();
         var shell = harness.Build();
-        Assert.True(shell.ShowEmptyState);
+        Assert.True(shell.ShowGate);
+        Assert.Same(shell.Chief, shell.SelectedThread);
 
         var project = await shell.AddProjectAsync(harness.Workspace);
 
@@ -73,6 +74,7 @@ public sealed class ShellViewModelTests
 
         await shell.AddProjectAsync(harness.Workspace);
 
+        Assert.True(shell.ShowGate);
         Assert.True(shell.ShowInstall);
         Assert.False(shell.ShowThread);
         Assert.Equal(ConnectionState.NotInstalled, shell.ActiveConnection!.State);
@@ -335,6 +337,7 @@ public sealed class ShellViewModelTests
 
         harness.Client.SimulateExit();
         await WaitUntilAsync(() => shell.ActiveConnection!.State == ConnectionState.Disconnected);
+        Assert.True(shell.ShowGate);
         Assert.True(shell.ShowConnect);
         Assert.Equal(ThreadStatus.New, thread.State);
 

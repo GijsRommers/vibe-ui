@@ -70,7 +70,7 @@ public sealed class MainWindowTests
             Assert.Equal(ThreadStatus.Ready, thread.State);
             Assert.True(shell.ShowThread);
             var threadView = Assert.IsType<ThreadView>(window.FindControl<ContentControl>("ThreadHost")!.GetVisualDescendants().OfType<ThreadView>().Single());
-            Assert.False(window.FindControl<StackPanel>("SignInPanel")!.IsVisible);
+            Assert.False(window.FindControl<Border>("Gate")!.IsVisible);
             Assert.False(window.FindControl<StackPanel>("EmptyState")!.IsVisible);
             Assert.True(window.FindControl<ChangesView>("Changes")!.IsVisible);
             Assert.Equal(3, threadView.FindControl<ComboBox>("ModeBox")!.ItemCount);
@@ -119,9 +119,10 @@ public sealed class MainWindowTests
             await Task.Yield();
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(ConnectionState.SignInRequired, shell.ActiveConnection!.State);
+            Assert.True(window.FindControl<Border>("Gate")!.IsVisible);
             Assert.True(window.FindControl<StackPanel>("SignInPanel")!.IsVisible);
-            Assert.True(window.FindControl<Button>("SignInButton")!.IsVisible);
-            Assert.False(window.FindControl<ContentControl>("ThreadHost")!.IsVisible);
+            Assert.False(window.FindControl<StackPanel>("InstallPanel")!.IsVisible);
+            Assert.False(window.FindControl<Grid>("Columns")!.IsVisible);
         }
         finally
         {
@@ -131,7 +132,7 @@ public sealed class MainWindowTests
     }
 
     [AvaloniaFact]
-    public async Task EmptyStateShowsWithoutProjects()
+    public async Task GateShowsTheInstallHintWhenVibeIsMissing()
     {
         var directory = Directory.CreateTempSubdirectory("vibe-ui-empty").FullName;
         var shell = new ShellViewModel(new AppState(directory), new ThreadStore(directory), () => null, (_, _, _, _) => throw new InvalidOperationException(), _ => { }, action => action());
@@ -139,10 +140,13 @@ public sealed class MainWindowTests
         window.Show();
         try
         {
+            await Task.Yield();
             Dispatcher.UIThread.RunJobs();
-            Assert.True(window.FindControl<StackPanel>("EmptyState")!.IsVisible);
-            Assert.False(window.FindControl<ContentControl>("ThreadHost")!.IsVisible);
-            Assert.False(window.FindControl<StackPanel>("InstallPanel")!.IsVisible);
+            Assert.Same(shell.Chief, shell.SelectedThread);
+            Assert.True(window.FindControl<Border>("Gate")!.IsVisible);
+            Assert.True(window.FindControl<StackPanel>("InstallPanel")!.IsVisible);
+            Assert.False(window.FindControl<StackPanel>("SignInPanel")!.IsVisible);
+            Assert.False(window.FindControl<Grid>("Columns")!.IsVisible);
         }
         finally
         {
