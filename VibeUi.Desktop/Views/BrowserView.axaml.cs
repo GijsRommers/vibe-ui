@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using VibeUi.Desktop.ViewModels;
 
 namespace VibeUi.Desktop.Views;
@@ -16,7 +18,20 @@ public partial class BrowserView : UserControl
         InitializeComponent();
         AddressBox.AddHandler(KeyDownEvent, AddressKeyDown, RoutingStrategies.Tunnel);
         DataContextChanged += (_, _) => Bind(DataContext as BrowserViewModel);
-        AttachedToVisualTree += (_, _) => EnsureWebView();
+        // The native view is created only once the pane is actually shown: it starts a platform
+        // web engine, which is wasted while hidden and unwelcome in headless tests.
+        AttachedToVisualTree += (_, _) =>
+        {
+            if (IsVisible)
+                EnsureWebView();
+        };
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == IsVisibleProperty && change.GetNewValue<bool>() && VisualRoot is not null)
+            EnsureWebView();
     }
 
     private void Bind(BrowserViewModel? model)

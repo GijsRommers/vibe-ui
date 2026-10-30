@@ -12,6 +12,8 @@ using VibeUi.Desktop.ViewModels;
 using VibeUi.Desktop.Views;
 
 [assembly: AvaloniaTestApplication(typeof(VibeUi.Desktop.Tests.TestApplication))]
+// Headless Avalonia owns one UI thread per session; classes running in parallel race its teardown.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace VibeUi.Desktop.Tests;
 
