@@ -31,7 +31,7 @@
                     <Ellipse Classes="dot" Classes.working="{Binding IsWorking}" Classes.attention="{Binding NeedsAttention}" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1">
                         <TextBlock Text="Chief of Staff" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Status}" Classes="faint" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding SidebarSubtitle}" Classes="faint" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasSidebarSubtitle}" />
                     </StackPanel>
                 </Grid>
             </Button>

@@ -73,7 +73,7 @@ public sealed class MainWindowTests
             Assert.False(window.FindControl<Border>("Gate")!.IsVisible);
             Assert.False(window.FindControl<StackPanel>("EmptyState")!.IsVisible);
             Assert.True(window.FindControl<ChangesView>("Changes")!.IsVisible);
-            Assert.Equal(3, threadView.FindControl<ComboBox>("ModeBox")!.ItemCount);
+            Assert.Equal(4, threadView.FindControl<ComboBox>("ModeBox")!.ItemCount);
             Assert.Equal(3, threadView.FindControl<ComboBox>("ThinkingBox")!.ItemCount);
             Assert.False(threadView.FindControl<Border>("PermissionCard")!.IsVisible);
 

@@ -67,6 +67,7 @@ public sealed class FakeAcpClient : IAcpClient
         [
             new SessionMode("ask", "Ask"),
             new SessionMode("accept-edits", "Accept Edits"),
+            new SessionMode("smart-approve", "Smart Approve"),
             new SessionMode("auto-approve", "Auto Approve"),
         ]);
         var options = new List<SessionConfigOption>

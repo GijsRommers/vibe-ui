@@ -59,9 +59,9 @@ public sealed class ShellViewModelTests
         Assert.True(shell.ShowThread);
         Assert.Equal(harness.Workspace, harness.Client.Workspace);
         Assert.Equal("Mistral Vibe 2.25.0", project!.Connection.AgentDescription);
-        Assert.Equal(["ask", "accept-edits", "auto-approve"], thread.Modes.Select(mode => mode.Id));
-        Assert.Equal("auto-approve", thread.SelectedMode?.Id); // Vibe UI's default; Vibe itself starts in accept-edits
-        Assert.Contains("session/set_mode:auto-approve", harness.Client.Calls);
+        Assert.Equal(["ask", "accept-edits", "smart-approve", "auto-approve"], thread.Modes.Select(mode => mode.Id));
+        Assert.Equal("smart-approve", thread.SelectedMode?.Id); // Vibe UI's default; Vibe itself starts in accept-edits
+        Assert.Contains("session/set_mode:smart-approve", harness.Client.Calls);
         Assert.Equal("mistral-medium-3.5", thread.SelectedModel?.Value);
         Assert.Equal("medium", thread.SelectedThinking?.Value);
         Assert.Empty(harness.Client.McpServersSeen.Single());
@@ -106,7 +106,7 @@ public sealed class ShellViewModelTests
         await WaitUntilAsync(() => shell.SelectedThread.State == ThreadStatus.Ready);
 
         Assert.True(shell.ShowThread);
-        Assert.Equal(["initialize", $"session/new:{harness.Workspace}", "authenticate:browser-auth-delegated:start", "authenticate:browser-auth-delegated:complete", $"session/new:{harness.Workspace}", "session/set_mode:auto-approve"],
+        Assert.Equal(["initialize", $"session/new:{harness.Workspace}", "authenticate:browser-auth-delegated:start", "authenticate:browser-auth-delegated:complete", $"session/new:{harness.Workspace}", "session/set_mode:smart-approve"],
             harness.Client.Calls);
     }
 
@@ -159,8 +159,8 @@ public sealed class ShellViewModelTests
         Assert.Equal("It says:\n```text\nhello world\n```\nDone.", reply.Text);
         Assert.Equal([(false, "It says:"), (true, "hello world"), (false, "Done.")], reply.Blocks.Select(block => (block.IsCode, block.Text)));
         Assert.Equal("text", reply.Blocks[1].Language);
-        Assert.Contains("1,200", thread.UsageText);
-        Assert.Equal("Done.", thread.Status);
+        Assert.Equal("1.2k of 200k context · $<0.01", thread.UsageText);
+        Assert.Equal("", thread.Status);
         Assert.Equal("Done.", thread.LastReply[^5..]);
 
         shell.ShowThoughts = true;

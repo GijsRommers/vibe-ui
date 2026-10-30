@@ -20,7 +20,8 @@
                     </StackPanel>
                     <TextBlock Classes="faint" Text="{Binding WorkspacePath}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !IsChief}" />
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding UsageText}" Classes="faint" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding UsageText}" Classes="faint" VerticalAlignment="Center"
+                           ToolTip.Tip="How much of the model's context window this thread uses, and what the session has cost" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <ToggleButton Classes="ghost" Content="Thoughts" FontSize="12" ToolTip.Tip="Show the model's reasoning (⌘⇧T)"
                                   IsChecked="{Binding $parent[Window].((vm:ShellViewModel)DataContext).ShowThoughts}" />

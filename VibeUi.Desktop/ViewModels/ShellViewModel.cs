@@ -235,9 +235,9 @@ public sealed partial class ShellViewModel : ObservableObject, IOrchestratorHost
     /// <summary>Settings. Saved on every change; the executable applies to agents started afterwards.</summary>
     [ObservableProperty] private string _vibeExecutable = "";
     [ObservableProperty] private int _briefingMinutes = 3;
-    [ObservableProperty] private string _defaultModeId = "auto-approve";
+    [ObservableProperty] private string _defaultModeId = "smart-approve";
 
-    public IReadOnlyList<string> ModeChoices { get; } = ["auto-approve", "accept-edits", "ask", "plan"];
+    public IReadOnlyList<string> ModeChoices { get; } = ["smart-approve", "auto-approve", "accept-edits", "ask", "plan"];
 
     partial void OnDefaultModeIdChanged(string value)
     {

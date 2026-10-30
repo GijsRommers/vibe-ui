@@ -37,8 +37,8 @@ public sealed class AppState
     /// <summary>Minutes between interim briefings from the Chief of Staff's tasks.</summary>
     public int BriefingMinutes { get; set; } = 3;
 
-    /// <summary>Vibe mode id new threads start in. Vibe's own default is accept-edits.</summary>
-    public string DefaultModeId { get; set; } = "auto-approve";
+    /// <summary>Vibe mode id new threads start in. Vibe's own default is accept-edits; Smart Approve lets Vibe judge routine tool calls.</summary>
+    public string DefaultModeId { get; set; } = "smart-approve";
 
     public static AppState Load(string? directory = null)
     {
@@ -56,7 +56,7 @@ public sealed class AppState
                     ShowChanges = snapshot.ShowChanges ?? true,
                     VibeExecutable = snapshot.VibeExecutable,
                     BriefingMinutes = snapshot.BriefingMinutes ?? 3,
-                    DefaultModeId = snapshot.DefaultModeId ?? "auto-approve",
+                    DefaultModeId = snapshot.DefaultModeId ?? "smart-approve",
                 };
             return Migrate(directory);
         }

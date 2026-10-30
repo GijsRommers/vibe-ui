@@ -102,7 +102,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
     public event EventHandler<TurnResult>? TurnCompleted;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsReady), nameof(IsWorking), nameof(IsBusy), nameof(CanSend), nameof(HasSession), nameof(IsOpening))]
+    [NotifyPropertyChangedFor(nameof(IsReady), nameof(IsWorking), nameof(IsBusy), nameof(CanSend), nameof(HasSession), nameof(IsOpening), nameof(SidebarSubtitle), nameof(HasSidebarSubtitle))]
     [NotifyCanExecuteChangedFor(nameof(SendCommand), nameof(StopCommand))]
     private ThreadStatus _state = ThreadStatus.New;
 
@@ -122,7 +122,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
     [ObservableProperty] private ConfigOptionChoice? _selectedThinking;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPendingPermission), nameof(NeedsAttention))]
+    [NotifyPropertyChangedFor(nameof(HasPendingPermission), nameof(NeedsAttention), nameof(SidebarSubtitle), nameof(HasSidebarSubtitle))]
     private PermissionRequestViewModel? _pendingPermission;
 
     [ObservableProperty]
@@ -146,6 +146,10 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
     public bool NeedsAttention => PendingPermission is not null;
     public bool IsWorkspaceUntrusted => WorkspaceTrust == "untrusted";
     public bool HasThinkingLevels => ThinkingLevels.Count > 0;
+
+    /// <summary>Second sidebar line: only while something is happening.</summary>
+    public string SidebarSubtitle => NeedsAttention ? "Waiting for your answer" : IsWorking ? "Working…" : State == ThreadStatus.Failed ? "Failed" : "";
+    public bool HasSidebarSubtitle => SidebarSubtitle.Length > 0;
 
     /// <summary>Opens the thread's session: resumes the saved one when Vibe can, otherwise starts a new one.</summary>
     public Task<bool> EnsureSessionAsync()
@@ -239,7 +243,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
                 return false;
             }
             State = ThreadStatus.Ready;
-            Status = "Ready.";
+            Status = "";
             connection.MarkSignedIn();
             if ((IsTask || IsChief) && IsWorkspaceUntrusted)
                 await TrustWorkspaceAsync();
@@ -306,7 +310,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
             stopReason = response.StopReason;
             Status = stopReason switch
             {
-                StopReasons.EndTurn => "Done.",
+                StopReasons.EndTurn => "",
                 StopReasons.Cancelled => "Stopped.",
                 StopReasons.Refusal => "Vibe declined to continue.",
                 StopReasons.MaxTokens => "Stopped: the token limit was reached.",
@@ -474,6 +478,27 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
         return Record;
     }
 
+    /// <summary>"9.7k of 200k context · $0.02": how full the model's context window is, and the session cost.</summary>
+    public static string FormatUsage(UsageSessionUpdate usage)
+    {
+        var text = usage.Size > 0
+            ? string.Create(CultureInfo.InvariantCulture, $"{Compact(usage.Used)} of {Compact(usage.Size)} context")
+            : string.Create(CultureInfo.InvariantCulture, $"{Compact(usage.Used)} context");
+        if (usage.Cost is { } cost)
+        {
+            var symbol = cost.Currency switch { "USD" => "$", "EUR" => "€", "GBP" => "£", var other => other + " " };
+            text += string.Create(CultureInfo.InvariantCulture, $" · {symbol}{(cost.Amount < 0.01 && cost.Amount > 0 ? "<0.01" : cost.Amount.ToString("0.00", CultureInfo.InvariantCulture))}");
+        }
+        return text;
+
+        static string Compact(long tokens) => tokens switch
+        {
+            >= 1_000_000 => string.Create(CultureInfo.InvariantCulture, $"{tokens / 1_000_000.0:0.#}M"),
+            >= 1_000 => string.Create(CultureInfo.InvariantCulture, $"{tokens / 1_000.0:0.#}k"),
+            _ => tokens.ToString(CultureInfo.InvariantCulture),
+        };
+    }
+
     public static string TitleFrom(string prompt)
     {
         var line = prompt.Split('\n').Select(part => part.Trim()).FirstOrDefault(part => part.Length > 0) ?? prompt.Trim();
@@ -491,7 +516,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
         if (_applyingOptions || value is null)
             return;
         Record.ModeId = value.Id;
-        _ = ApplySelectionAsync(client => client.SetModeAsync(_sessionId!, value.Id), $"Mode: {value.Name}.");
+        _ = ApplySelectionAsync(client => client.SetModeAsync(_sessionId!, value.Id));
     }
 
     partial void OnSelectedModelChanged(ConfigOptionChoice? value)
@@ -499,24 +524,23 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
         if (_applyingOptions || value is null)
             return;
         Record.ModelId = value.Value;
-        _ = ApplySelectionAsync(async client => ApplyConfigOptions((await client.SetConfigOptionAsync(_sessionId!, "model", value.Value)).ConfigOptions), $"Model: {value.Name}.");
+        _ = ApplySelectionAsync(async client => ApplyConfigOptions((await client.SetConfigOptionAsync(_sessionId!, "model", value.Value)).ConfigOptions));
     }
 
     partial void OnSelectedThinkingChanged(ConfigOptionChoice? value)
     {
         if (_applyingOptions || value is null)
             return;
-        _ = ApplySelectionAsync(async client => ApplyConfigOptions((await client.SetConfigOptionAsync(_sessionId!, "thinking", value.Value)).ConfigOptions), $"Thinking: {value.Name}.");
+        _ = ApplySelectionAsync(async client => ApplyConfigOptions((await client.SetConfigOptionAsync(_sessionId!, "thinking", value.Value)).ConfigOptions));
     }
 
-    private async Task ApplySelectionAsync(Func<IAcpClient, Task> change, string success)
+    private async Task ApplySelectionAsync(Func<IAcpClient, Task> change)
     {
         if (Project.Connection.Client is not { } client || _sessionId is null)
             return;
         try
         {
             await change(client);
-            Status = success;
             Changed?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception exception) when (exception is JsonRpcException or IOException or ObjectDisposedException)
@@ -689,9 +713,7 @@ public sealed partial class ThreadViewModel : ObservableObject, ISessionSink
                     Title = title;
                 return;
             case UsageSessionUpdate usage:
-                UsageText = usage.Cost is { } cost
-                    ? string.Create(CultureInfo.InvariantCulture, $"{usage.Used:N0} / {usage.Size:N0} tokens · {cost.Amount:0.00##} {cost.Currency}")
-                    : string.Create(CultureInfo.InvariantCulture, $"{usage.Used:N0} / {usage.Size:N0} tokens");
+                UsageText = FormatUsage(usage);
                 return;
             default:
                 return;
